@@ -597,7 +597,7 @@
     const tabs = order.map((k) => `<button type="button" data-side="${esc(k)}" aria-pressed="false">${esc(P.sides[k].label)}</button>`).join('');
     ['#heroTabs', '#hlTabs'].forEach((sel) => {
       const host = $(sel);
-      host.innerHTML = tabs;
+      host.innerHTML = `<span class="seg-thumb" aria-hidden="true"></span>${tabs}`;
       host.hidden = order.length < 2;
       $$('button', host).forEach((b) => b.addEventListener('click', () => { if (b.dataset.side !== side) setSide(b.dataset.side); }));
     });
@@ -619,7 +619,21 @@
       hc.classList.add('swap');
     }
     $$('#heroTabs button, #hlTabs button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.side === key)));
+    moveThumbs(animate);
     buildGallery(s.items);
+  }
+
+  // The white pill in each side switch slides over to the chosen option.
+  function moveThumbs(animate = true) {
+    $$('#heroTabs, #hlTabs').forEach((host) => {
+      const thumb = $('.seg-thumb', host);
+      const btn = $('button[aria-pressed="true"]', host);
+      if (!thumb || !btn) return;
+      if (!animate) thumb.classList.add('no-anim');
+      thumb.style.width = `${btn.offsetWidth}px`;
+      thumb.style.transform = `translateX(${btn.offsetLeft}px)`;
+      if (!animate) requestAnimationFrame(() => requestAnimationFrame(() => thumb.classList.remove('no-anim')));
+    });
   }
 
   /* ---------------------------- gallery ---------------------------- */
@@ -1167,7 +1181,7 @@
       toggle.setAttribute('aria-expanded', String(open));
     });
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', () => { setGutter(); onScroll(); });
+    window.addEventListener('resize', () => { setGutter(); onScroll(); if (isHome) moveThumbs(false); });
   }
 
   function wireHome() {
@@ -1337,7 +1351,7 @@
   setGutter();
   // re-measure when the page width changes, e.g. when the scrollbar appears after the intro
   if (window.ResizeObserver) new ResizeObserver(setGutter).observe(document.documentElement);
-  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitDoodles());
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { fitDoodles(); if (isHome) moveThumbs(false); });
   let refit = 0;
   window.addEventListener('resize', () => { clearTimeout(refit); refit = setTimeout(() => fitDoodles(), 150); });
   wireShared();

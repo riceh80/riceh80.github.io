@@ -975,3 +975,18 @@ a.fun-song[href]:hover .fun-title { text-decoration: underline; text-underline-o
 
 /* while the highlights glide, snapping waits so it can slide smoothly */
 .gallery.gliding { scroll-snap-type: none; scroll-behavior: auto; }
+
+/* side switches: a pill that slides to the chosen option (Apple-style segmented control) */
+.segmented { position: relative; isolation: isolate; }
+.segmented button { position: relative; z-index: 1; }
+.segmented button[aria-pressed="true"] { background: transparent; box-shadow: none; }
+.seg-thumb {
+  position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0;
+  width: 0;
+  border-radius: 980px;
+  background: var(--night-ink);
+  transition: transform .45s cubic-bezier(.3, .9, .3, 1.05), width .45s cubic-bezier(.3, .9, .3, 1.05);
+  pointer-events: none;
+}
+.segmented-light .seg-thumb { background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, .14); }
+.segmented button { transition: color .3s ease; }
