@@ -377,11 +377,11 @@
   }
 
   /* ======================== PERSON (shared) ======================== */
-  function usePerson(id) {
+  function usePerson(id, remember = true) {
     pid = SITE.people[id] ? id : SITE.order[0];
     P = SITE.people[pid];
-    store.set('person', pid);
-    document.title = isHome ? P.fullName : `About — ${P.fullName}`;
+    if (remember) store.set('person', pid);
+    if (!isHome) document.title = `About — ${P.fullName}`;
     $$('[data-name]').forEach((el) => { el.textContent = P.fullName; });
     fillAvatar($('#chipAvatar'), pid);
     $('#chipLabel').textContent = P.name;
@@ -425,6 +425,8 @@
 
   function playIntro() {
     clearTimers();
+    store.set('stage', 'picking');
+    document.title = SITE_TITLE;
     body.classList.add('intro-active');
     picker.hidden = true;
     picker.className = 'picker';
@@ -480,6 +482,8 @@
 
   function openPicker(withWelcome, match = null) {
     clearTimeout(timers.stage);
+    store.set('stage', 'picking');
+    document.title = SITE_TITLE;
     body.classList.add('intro-active');
     picker.hidden = false;
     picker.className = 'picker instant';
@@ -524,15 +528,21 @@
     }, 650);
   }
 
+  // The tab says "Portsite" until someone picks a profile, then that person's name.
+  const SITE_TITLE = 'Portsite';
+
   function enterSite() {
+    store.set('stage', 'viewing');
+    store.set('person', pid);
+    document.title = P.fullName;
     body.classList.remove('intro-active');
     body.classList.add('site-ready');
     update();
     syncGalleryMedia();
   }
 
-  function renderPerson(id) {
-    usePerson(id);
+  function renderPerson(id, remember = true) {
+    usePerson(id, remember);
     $('#heroResume').href = P.resume || '#';
     $('#heroResume').hidden = !P.resume;
     $('#teaserTitle').textContent = `More about ${P.name}.`;
@@ -999,9 +1009,11 @@
     wireHome();
 
     const stored = store.get('person');
+    const stage = store.get('stage');
     const fromUrl = params.get('p');
     const target = location.hash && document.getElementById(location.hash.slice(1));
-    renderPerson(SITE.people[fromUrl] ? fromUrl : (SITE.people[stored] ? stored : SITE.order[0]));
+    // draw a page behind the picker, but don't count it as a choice yet
+    renderPerson(SITE.people[fromUrl] ? fromUrl : (SITE.people[stored] ? stored : SITE.order[0]), false);
 
     if (params.has('intro')) {
       history.replaceState(null, '', location.pathname);
@@ -1009,10 +1021,15 @@
     } else if (params.has('pick')) {
       history.replaceState(null, '', location.pathname);
       openPicker(false);
-    } else if (SITE.people[fromUrl] || SITE.people[stored]) {   // shared link, or already picked this visit
-      if (fromUrl) history.replaceState(null, '', location.pathname + location.hash);
+    } else if (SITE.people[fromUrl]) {                         // a shared link straight to someone
+      history.replaceState(null, '', location.pathname + location.hash);
       enterSite();
       if (target) requestAnimationFrame(() => target.scrollIntoView());
+    } else if (stage === 'viewing' && SITE.people[stored]) {   // refreshed while viewing a profile
+      enterSite();
+      if (target) requestAnimationFrame(() => target.scrollIntoView());
+    } else if (stage === 'picking') {                          // refreshed during the intro or selection
+      openPicker(false);
     } else {
       playIntro();
     }
