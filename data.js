@@ -33,7 +33,7 @@ window.SITE = {
       // discordId: your Discord user ID. With it, the page shows the game you're
       // playing (and for how long) and your Spotify song, live from Discord via
       // Lanyard (join discord.gg/lanyard once). Leave '' to hide the live cards.
-      discordId: '',
+      discordId: '409780143943450624',
       // Games you play. The one you're playing right now gets a "now" tag.
       games: ['Valorant', 'League of Legends', 'Roblox', 'Honkai: Star Rail', 'Minecraft'],
       github: 'https://github.com/riceh80',
