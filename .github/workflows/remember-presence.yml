@@ -1,0 +1,64 @@
+# Remembers your last game and song so the About page can show them while you're offline.
+#
+# Every 10 minutes it reads your Discord status from Lanyard. If you're playing a game or
+# listening on Spotify, it saves that to your Lanyard KV (last_game, last_song, ...).
+# The About page reads those values when you're not playing anything.
+#
+# Setup (once):
+#   1. Repo Settings → Secrets and variables → Actions → Variables: add DISCORD_ID
+#   2. Same page → Secrets: add LANYARD_KEY (DM ".apikey" to the Lanyard bot on Discord)
+# Until both exist, this job just exits.
+
+name: Remember last game and song
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  remember:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Save the current game and song to Lanyard KV
+        env:
+          DISCORD_ID: ${{ vars.DISCORD_ID }}
+          LANYARD_KEY: ${{ secrets.LANYARD_KEY }}
+        run: |
+          if [ -z "$DISCORD_ID" ] || [ -z "$LANYARD_KEY" ]; then
+            echo "DISCORD_ID or LANYARD_KEY not set yet; nothing to do."
+            exit 0
+          fi
+          data=$(curl -fsS "https://api.lanyard.rest/v1/users/$DISCORD_ID")
+          now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          now_ms=$(( $(date +%s) * 1000 ))
+          patch=$(jq -n \
+            --argjson d "$data" --arg now "$now" --argjson nowms "$now_ms" '
+            ($d.data.activities // [] | map(select(.type == 0)) | first) as $g
+            | (if $d.data.listening_to_spotify then $d.data.spotify else null end) as $s
+            | {}
+            + (if $g then {
+                last_game: $g.name,
+                last_game_at: $now,
+                last_game_minutes: (if $g.timestamps.start then ((($nowms - $g.timestamps.start) / 60000) | floor | tostring) else "" end)
+              } else {} end)
+            + (if $s then {
+                last_song: $s.song,
+                last_artist: ($s.artist // "" | gsub(";"; ",")),
+                last_cover: ($s.album_art_url // ""),
+                last_track: ($s.track_id // ""),
+                last_song_at: $now
+              } else {} end)
+            | with_entries(select(.value != "" and .value != null))')
+          if [ "$patch" = "{}" ]; then
+            echo "Not playing or listening right now."
+            exit 0
+          fi
+          curl -fsS -X PATCH "https://api.lanyard.rest/v1/users/$DISCORD_ID/kv" \
+            -H "Authorization: $LANYARD_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$patch" > /dev/null
+          echo "Saved: $(echo "$patch" | jq -r 'keys | join(", ")')"

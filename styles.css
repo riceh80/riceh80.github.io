@@ -893,48 +893,56 @@ body.sheet-open { overflow: hidden; }
   .a-story { font-size: 20px; }
 }
 
-/* ---------- About: "pick a side" doodles ---------- */
-.a-sides { margin-top: clamp(52px, 8vh, 88px); text-align: center; }
-.a-sides-note {
-  display: inline-flex; align-items: flex-end; gap: 4px;
-  font-family: "Caveat", "Comic Sans MS", cursive; font-weight: 700;
-  font-size: clamp(23px, 2.2vw, 30px);
-  color: var(--red-text);
-  transform: rotate(-2deg);
-}
-.a-sides-note svg { width: clamp(40px, 4vw, 54px); height: auto; overflow: visible; transform: translateY(14px); }
-.a-sides-note path { fill: none; stroke: var(--red); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.a-sides-list {
-  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: clamp(10px, 2.6vw, 36px);
-  max-width: 900px; margin: 22px auto 0;
-}
-.side-doodle {
-  display: flex; flex-direction: column; align-items: center; gap: 8px;
-  padding: 16px 8px 12px;
-  border-radius: 20px;
-  color: var(--ink);
-  transition: background-color .2s;
-}
-.side-doodle:hover, .side-doodle:focus-visible { background: var(--paper-2); }
-.side-doodle svg { width: clamp(88px, 10vw, 132px); height: auto; overflow: visible; }
-.side-doodle .d { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
-.side-doodle .accent { stroke: var(--red); }
-.side-doodle .dot { fill: var(--red); opacity: 0; transition: opacity .3s ease calc(var(--dd) + .8s); }
-.side-doodle .d-hand { font-family: "Caveat", cursive; font-weight: 700; font-size: 17px; fill: var(--ink); opacity: 0; transition: opacity .3s ease calc(var(--dd) + .8s); }
-.side-doodle span { font-family: "Caveat", "Comic Sans MS", cursive; font-weight: 700; font-size: clamp(22px, 2vw, 28px); line-height: 1; }
-.a-sides .d { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.1s cubic-bezier(.5, 0, .3, 1) var(--dd, 0s); }
-.a-sides.drawn .d { stroke-dashoffset: 0; }
-.a-sides.drawn .dot, .a-sides.drawn .d-hand { opacity: 1; }
-.side-doodle:hover svg, .side-doodle:focus-visible svg { animation: wiggle .5s steps(1) infinite; }
-@keyframes wiggle { 0% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
-@media (max-width: 734px) {
-  .a-sides-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .side-doodle svg { width: 96px; }
-}
-
 /* ---------- About: Apple-style scroll reveals ---------- */
 .page-about .reveal { transform: translateY(56px); transition-duration: 1.1s, 1.1s; }
 .page-about .h2.reveal { transform: translateY(56px) scale(.96); transform-origin: 0 100%; }
 .page-about .exp-item.reveal { transform: translateX(-48px); }
 .page-about .reveal.in, .page-about .h2.reveal.in, .page-about .exp-item.reveal.in { transform: none; }
+
+/* ---------- About: Off the clock (live game + music, games I play) ---------- */
+.a-fun { background: var(--paper); padding: 0 0 clamp(100px, 14vh, 150px); }
+.fun-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 44px; }
+.fun-card {
+  position: relative; overflow: hidden;
+  min-height: 250px;
+  padding: 26px 26px 24px;
+  border-radius: 24px;
+  background: var(--night-3); color: var(--night-ink);
+  display: flex; flex-direction: column;
+}
+.fun-doodle { position: absolute; right: 18px; top: 16px; width: 78px; height: auto; overflow: visible; color: rgba(244, 236, 220, .55); }
+.fun-doodle path, .fun-doodle circle { fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.fun-doodle .fill { fill: #ff5a5f; stroke: none; }
+.fun-doodle .accent { stroke: #ff5a5f; }
+.fun-label { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--night-2); }
+.fun-dot { width: 9px; height: 9px; border-radius: 50%; background: #6e6e73; flex: none; }
+.fun-card[data-state="live"] .fun-dot { background: #30d158; box-shadow: 0 0 0 0 rgba(48, 209, 88, .6); animation: livePulse 1.8s ease-out infinite; }
+.fun-card[data-state="last"] .fun-dot { background: #ff9f0a; }
+@keyframes livePulse { 70% { box-shadow: 0 0 0 9px rgba(48, 209, 88, 0); } 100% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0); } }
+.fun-main { display: flex; align-items: center; gap: 14px; margin-top: auto; padding-top: 28px; color: inherit; }
+.fun-main > div { min-width: 0; }
+.fun-art { width: 64px; height: 64px; border-radius: 12px; object-fit: cover; flex: none; background: #2c2c2e; }
+.fun-title { font-size: clamp(28px, 2.6vw, 36px); font-weight: 800; font-stretch: 78%; line-height: 1; text-transform: uppercase; letter-spacing: .005em; overflow-wrap: anywhere; }
+.fun-title-sm { font-size: clamp(22px, 2vw, 27px); text-transform: none; font-stretch: 85%; }
+.fun-sub { margin-top: 6px; font-size: 15px; color: var(--night-2); }
+a.fun-song[href]:hover .fun-title { text-decoration: underline; text-underline-offset: 3px; }
+.fun-progress { height: 4px; border-radius: 4px; background: #3a3a3c; margin-top: 16px; overflow: hidden; }
+.fun-progress span { display: block; height: 100%; width: 0; background: var(--night-ink); border-radius: 4px; transition: width 1s linear; }
+.fun-times { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: var(--night-2); font-variant-numeric: tabular-nums; }
+.fun-games { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 24px; }
+.fun-games li { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 980px; background: #2c2c2e; font-size: 14px; font-weight: 500; }
+.fun-games li.now { background: var(--night-ink); color: var(--ink); }
+.fun-games li.now::after { content: "● now"; font-size: 11px; font-weight: 700; color: #1f9d57; }
+@media (max-width: 1068px) { .fun-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fun-card#funGames { grid-column: 1 / -1; min-height: 0; } }
+@media (max-width: 734px) {
+  .fun-grid { grid-template-columns: 1fr; gap: 14px; margin-top: 32px; }
+  .fun-card { min-height: 0; padding: 22px; }
+  .fun-main { padding-top: 22px; }
+  .fun-doodle { width: 64px; }
+}
+
+.fun-grid.solo { grid-template-columns: 1fr; }
+.fun-grid.solo .fun-card { min-height: 0; }
+
+/* things already scrolled past appear finished, without replaying their animation */
+.no-anim, .no-anim * { transition: none !important; }

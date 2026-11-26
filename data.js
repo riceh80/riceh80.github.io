@@ -28,6 +28,14 @@ window.SITE = {
       color: '#e50914',
       email: 'darrenhui01@gmail.com',
       linkedin: 'https://www.linkedin.com/in/darrenHui2005',
+
+      // OFF THE CLOCK (About page)
+      // discordId: your Discord user ID. With it, the page shows the game you're
+      // playing (and for how long) and your Spotify song, live from Discord via
+      // Lanyard (join discord.gg/lanyard once). Leave '' to hide the live cards.
+      discordId: '',
+      // Games you play. The one you're playing right now gets a "now" tag.
+      games: ['Valorant', 'League of Legends', 'Roblox', 'Honkai: Star Rail', 'Minecraft'],
       github: 'https://github.com/riceh80',
       resume: 'assets/people/darren/resume.pdf',
 

@@ -849,7 +849,7 @@
         `</div>`);
     });
     requestAnimationFrame(() => setTimeout(() => sketch.classList.add('drawn'), reduced ? 0 : 250));
-    renderSideDoodles();
+    renderFun();
     $('#statsSection').hidden = !(a.stats && a.stats.length);
     $('#stats').innerHTML = (a.stats || []).map(([n, c], i) =>
       `<div class="stat reveal" style="--d:${i * 0.06}s"><p class="stat-num">${esc(n)}</p><p class="stat-cap">${esc(c)}</p></div>`).join('');
@@ -863,36 +863,157 @@
       `<div class="spec-row reveal" style="--d:${(i * 0.06).toFixed(2)}s"><dt>${esc(label)}</dt><dd>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}</dd></div>`).join('');
   }
 
-  // "Pick a side" doodles on the About page: hand-drawn icons that open that side's highlights
-  const SIDE_DOODLES = {
-    gamedev: `<path class="d" d="M30 30H90A22 22 0 0 1 110 60L105 75A9 9 0 0 1 90 78L82 69H38L30 78A9 9 0 0 1 15 75L10 60A22 22 0 0 1 30 30Z"/>
-      <path class="d" d="M38 44V56M32 50H44"/><circle class="dot" cx="80" cy="46" r="3.5"/><circle class="dot" cx="89" cy="54" r="3.5"/>`,
-    webdev: `<path class="d" d="M18 16H102A6 6 0 0 1 108 22V70A6 6 0 0 1 102 76H18A6 6 0 0 1 12 70V22A6 6 0 0 1 18 16Z"/>
-      <path class="d" d="M12 29H108"/><circle class="d" cx="21" cy="22.5" r="2"/><circle class="d" cx="29" cy="22.5" r="2"/>
-      <path class="d accent" d="M50 42L41 51L50 60M70 42L79 51L70 60M64 38L56 64"/>`,
-    teacher: `<path class="d" d="M14 12H106V66H14Z"/><path class="d" d="M38 66L31 84M82 66L89 84M48 66V72"/>
-      <path class="d accent" d="M26 30Q32 22 38 30T50 30"/><text class="d-hand" x="58" y="56">x = 16</text>`,
-    esports: `<path class="d" d="M28 56V46A32 32 0 0 1 92 46V56"/>
-      <path class="d" d="M22 50H34A4 4 0 0 1 38 54V70A4 4 0 0 1 34 74H22A4 4 0 0 1 18 70V54A4 4 0 0 1 22 50Z"/>
-      <path class="d" d="M86 50H98A4 4 0 0 1 102 54V70A4 4 0 0 1 98 74H86A4 4 0 0 1 82 70V54A4 4 0 0 1 86 50Z"/>
-      <path class="d accent" d="M30 74Q34 84 52 84"/><circle class="dot" cx="55" cy="84" r="3.5"/>`,
+  /* ---------------- OFF THE CLOCK: live Discord status ----------------
+     Reads your Discord presence through Lanyard (api.lanyard.rest): the game
+     Discord detects on your laptop or PC (with how long you've been playing),
+     and your Spotify song. When you're not playing, it shows the last game /
+     song saved by the "remember" job (Lanyard KV: last_game, last_song ...). */
+  const ago = (ms) => {
+    const m = Math.max(1, Math.round(ms / 60000));
+    if (m < 60) return `${m}m ago`;
+    const h = Math.round(m / 60);
+    return h < 48 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
   };
+  const span = (ms) => {
+    const m = Math.max(0, Math.floor(ms / 60000));
+    const h = Math.floor(m / 60);
+    return h ? `${h}h ${m % 60}m` : `${m}m`;
+  };
+  const clock = (ms) => {
+    const s = Math.max(0, Math.floor(ms / 1000));
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  };
+  const fun = { data: null, tick: 0 };
 
-  function renderSideDoodles() {
-    const host = $('#aboutSides');
-    if (!host) return;
-    const order = (P.sideOrder || Object.keys(P.sides || {})).filter((k) => P.sides[k]);
-    host.hidden = !order.length;
-    $('#aboutSidesList').innerHTML = order.map((k, i) =>
-      `<li><a class="side-doodle" href="index.html?p=${esc(pid)}&side=${esc(k)}#highlights" style="--dd:${(i * 0.18).toFixed(2)}s">` +
-        `<svg viewBox="0 0 120 92" aria-hidden="true"><g filter="url(#boil)">${SIDE_DOODLES[k] || ''}</g></svg>` +
-        `<span>${esc(P.sides[k].label)}</span></a></li>`).join('');
-    $$('#aboutSides .d').forEach((p) => p.setAttribute('pathLength', '1'));
-    if (reduced) { host.classList.add('drawn'); return; }
-    const io = new IntersectionObserver(([en]) => {
-      if (en.isIntersecting) { host.classList.add('drawn'); io.disconnect(); }
-    }, { threshold: 0.35 });
-    io.observe(host);
+  function renderFun() {
+    const games = P.games || [];
+    $('#funGames').hidden = !games.length;
+    $('#funGamesList').innerHTML = games.map((g) => `<li data-game="${esc(g.toLowerCase())}"><span>${esc(g)}</span></li>`).join('');
+    const live = !!P.discordId;
+    $('#funPlaying').hidden = !live;
+    $('#funListening').hidden = !live;
+    $('#funSection').hidden = !live && !games.length;
+    $('.fun-grid').classList.toggle('solo', !live);   // just the games card: let it span the row
+    if (live) connectPresence(P.discordId);
+  }
+
+  function gameArt(act) {
+    const img = act && act.assets && act.assets.large_image;
+    if (!img) return '';
+    if (img.startsWith('mp:')) return `https://media.discordapp.net/${img.slice(3)}`;
+    if (act.application_id) return `https://cdn.discordapp.com/app-assets/${act.application_id}/${img}.png`;
+    return '';
+  }
+
+  function paintPresence() {
+    const d = fun.data;
+    if (!d) return;
+    const now = Date.now();
+    const kv = d.kv || {};
+    const status = d.discord_status || 'offline';
+
+    // --- game
+    const act = (d.activities || []).find((a) => a.type === 0);
+    const playCard = $('#funPlaying');
+    const art = $('#funGameArt');
+    if (act) {
+      playCard.dataset.state = 'live';
+      $('#funPlayingLabel').textContent = 'Playing now';
+      $('#funGame').textContent = act.name;
+      const start = act.timestamps && act.timestamps.start;
+      $('#funGameSub').textContent = start ? `for ${span(now - start)}` : 'right now';
+      const src = gameArt(act);
+      art.hidden = !src;
+      if (src && art.getAttribute('src') !== src) art.src = src;
+    } else if (kv.last_game) {
+      playCard.dataset.state = 'last';
+      $('#funPlayingLabel').textContent = 'Last played';
+      $('#funGame').textContent = kv.last_game;
+      const when = kv.last_game_at ? Date.parse(kv.last_game_at) : NaN;
+      const mins = Number(kv.last_game_minutes);
+      $('#funGameSub').textContent = [mins ? `played ${span(mins * 60000)}` : '', isNaN(when) ? '' : ago(now - when)].filter(Boolean).join(' · ');
+      art.hidden = true;
+    } else {
+      playCard.dataset.state = 'idle';
+      $('#funPlayingLabel').textContent = status === 'offline' ? 'Offline' : 'Not playing right now';
+      $('#funGame').textContent = status === 'offline' ? 'Back soon' : 'Taking a break';
+      $('#funGameSub').textContent = '';
+      art.hidden = true;
+    }
+    $$('#funGamesList li').forEach((li) => li.classList.toggle('now', !!act && li.dataset.game === act.name.toLowerCase()));
+
+    // --- music
+    const sp = d.listening_to_spotify && d.spotify;
+    const songCard = $('#funListening');
+    const cover = $('#funCover');
+    const link = $('#funSongLink');
+    if (sp) {
+      songCard.dataset.state = 'live';
+      $('#funSongLabel').textContent = 'Listening now';
+      $('#funSong').textContent = sp.song;
+      $('#funArtist').textContent = (sp.artist || '').replace(/;/g, ',');
+      cover.hidden = !sp.album_art_url;
+      if (sp.album_art_url && cover.getAttribute('src') !== sp.album_art_url) cover.src = sp.album_art_url;
+      if (sp.track_id) link.href = `https://open.spotify.com/track/${sp.track_id}`; else link.removeAttribute('href');
+      const t = sp.timestamps || {};
+      const total = t.end - t.start;
+      const done = Math.min(total, now - t.start);
+      const ok = total > 0;
+      $('#funProgress').hidden = !ok;
+      $('#funTimes').hidden = !ok;
+      if (ok) {
+        $('#funProgressBar').style.width = `${(done / total) * 100}%`;
+        $('#funElapsed').textContent = clock(done);
+        $('#funDuration').textContent = clock(total);
+      }
+    } else {
+      $('#funProgress').hidden = true;
+      $('#funTimes').hidden = true;
+      if (kv.last_song) {
+        songCard.dataset.state = 'last';
+        $('#funSongLabel').textContent = 'Last listened';
+        $('#funSong').textContent = kv.last_song;
+        const when = kv.last_song_at ? Date.parse(kv.last_song_at) : NaN;
+        $('#funArtist').textContent = [kv.last_artist, isNaN(when) ? '' : ago(now - when)].filter(Boolean).join(' · ');
+        cover.hidden = !kv.last_cover;
+        if (kv.last_cover) cover.src = kv.last_cover;
+        if (kv.last_track) link.href = `https://open.spotify.com/track/${kv.last_track}`; else link.removeAttribute('href');
+      } else {
+        songCard.dataset.state = 'idle';
+        $('#funSongLabel').textContent = 'Not listening right now';
+        $('#funSong').textContent = 'Nothing on';
+        $('#funArtist').textContent = '';
+        cover.hidden = true;
+        link.removeAttribute('href');
+      }
+    }
+  }
+
+  // Live updates over Lanyard's socket; falls back to checking every 30s.
+  function connectPresence(id) {
+    const poll = () => fetch(`https://api.lanyard.rest/v1/users/${encodeURIComponent(id)}`)
+      .then((r) => r.json()).then((j) => { if (j.success) { fun.data = j.data; paintPresence(); } })
+      .catch(() => {});
+    let beat = 0;
+    let pollTimer = 0;
+    const startPolling = () => { if (!pollTimer) { poll(); pollTimer = setInterval(() => { if (!document.hidden) poll(); }, 30000); } };
+    try {
+      const ws = new WebSocket('wss://api.lanyard.rest/socket');
+      ws.onmessage = (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.op === 1) {
+          ws.send(JSON.stringify({ op: 2, d: { subscribe_to_id: id } }));
+          beat = setInterval(() => ws.readyState === 1 && ws.send(JSON.stringify({ op: 3 })), msg.d.heartbeat_interval);
+        } else if (msg.op === 0 && msg.d) {
+          fun.data = msg.d;
+          paintPresence();
+        }
+      };
+      ws.onerror = () => { clearInterval(beat); startPolling(); };
+      ws.onclose = () => { clearInterval(beat); startPolling(); };
+    } catch (e) { startPolling(); }
+    clearInterval(fun.tick);
+    fun.tick = setInterval(() => { if (!document.hidden) paintPresence(); }, 1000);   // timers + progress bar
   }
 
   // Count a number up from 0 when it scrolls into view (500, 16, ...)
@@ -903,10 +1024,12 @@
       const target = Number(m[1]);
       const suffix = m[2];
       if (reduced) return;
+      el.dataset.final = `${target}${suffix}`;
       el.textContent = `0${suffix}`;
       const io = new IntersectionObserver(([en]) => {
-        if (!en.isIntersecting) return;
+        if (!en.isIntersecting || el.dataset.counted) return;
         io.disconnect();
+        el.dataset.counted = '1';
         const t0 = performance.now();
         const dur = 1500;
         const step = (t) => {
@@ -955,8 +1078,25 @@
     requestAnimationFrame(() => { ticking = false; update(); });
   }
 
+  // Anything already scrolled past (or jumped over with a link / refresh) is shown in its
+  // finished state, so nothing above you is left blank waiting for you to scroll back.
+  function showPassed() {
+    const passed = (el) => { const r = el.getBoundingClientRect(); return (r.width || r.height) && r.bottom < 0; };
+    // show it already finished (no fade / draw-on), then re-enable transitions for hovers etc.
+    const finish = (el, cls) => {
+      el.classList.add('no-anim', cls);
+      requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('no-anim')));
+    };
+    $$('.reveal:not(.in)').forEach((el) => { if (passed(el)) finish(el, 'in'); });
+    $$('.media:not(.drawn)').forEach((el) => { if (passed(el)) finish(el, 'drawn'); });
+    $$('.stat-num[data-final]:not([data-counted])').forEach((el) => {
+      if (passed(el)) { el.dataset.counted = '1'; el.textContent = el.dataset.final; }
+    });
+  }
+
   function update() {
     const vh = window.innerHeight;
+    showPassed();
     const scrub = $('#scrubText');
     if (scrub && words.length) {
       const r = scrub.getBoundingClientRect();
