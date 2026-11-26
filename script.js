@@ -849,16 +849,76 @@
         `</div>`);
     });
     requestAnimationFrame(() => setTimeout(() => sketch.classList.add('drawn'), reduced ? 0 : 250));
+    renderSideDoodles();
     $('#statsSection').hidden = !(a.stats && a.stats.length);
     $('#stats').innerHTML = (a.stats || []).map(([n, c], i) =>
       `<div class="stat reveal" style="--d:${i * 0.06}s"><p class="stat-num">${esc(n)}</p><p class="stat-cap">${esc(c)}</p></div>`).join('');
+    countUpOnView($$('#stats .stat-num'));
     $('#experience').hidden = !(a.experience && a.experience.length);
-    $('#exp').innerHTML = (a.experience || []).map((e) =>
-      `<li class="exp-item reveal"><div class="exp-when"><p class="exp-org">${esc(e.org)}</p><p>${esc(e.when)}</p></div>` +
+    $('#exp').innerHTML = (a.experience || []).map((e, i) =>
+      `<li class="exp-item reveal" style="--d:${(i * 0.1).toFixed(2)}s"><div class="exp-when"><p class="exp-org">${esc(e.org)}</p><p>${esc(e.when)}</p></div>` +
       `<div><h3 class="exp-role">${esc(e.role)}</h3><ul class="exp-points">${e.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul></div></li>`).join('');
     $('#specs').hidden = !(a.specs && a.specs.length);
-    $('#specTable').innerHTML = (a.specs || []).map(([label, lines]) =>
-      `<div class="spec-row reveal"><dt>${esc(label)}</dt><dd>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}</dd></div>`).join('');
+    $('#specTable').innerHTML = (a.specs || []).map(([label, lines], i) =>
+      `<div class="spec-row reveal" style="--d:${(i * 0.06).toFixed(2)}s"><dt>${esc(label)}</dt><dd>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}</dd></div>`).join('');
+  }
+
+  // "Pick a side" doodles on the About page: hand-drawn icons that open that side's highlights
+  const SIDE_DOODLES = {
+    gamedev: `<path class="d" d="M30 30H90A22 22 0 0 1 110 60L105 75A9 9 0 0 1 90 78L82 69H38L30 78A9 9 0 0 1 15 75L10 60A22 22 0 0 1 30 30Z"/>
+      <path class="d" d="M38 44V56M32 50H44"/><circle class="dot" cx="80" cy="46" r="3.5"/><circle class="dot" cx="89" cy="54" r="3.5"/>`,
+    webdev: `<path class="d" d="M18 16H102A6 6 0 0 1 108 22V70A6 6 0 0 1 102 76H18A6 6 0 0 1 12 70V22A6 6 0 0 1 18 16Z"/>
+      <path class="d" d="M12 29H108"/><circle class="d" cx="21" cy="22.5" r="2"/><circle class="d" cx="29" cy="22.5" r="2"/>
+      <path class="d accent" d="M50 42L41 51L50 60M70 42L79 51L70 60M64 38L56 64"/>`,
+    teacher: `<path class="d" d="M14 12H106V66H14Z"/><path class="d" d="M38 66L31 84M82 66L89 84M48 66V72"/>
+      <path class="d accent" d="M26 30Q32 22 38 30T50 30"/><text class="d-hand" x="58" y="56">x = 16</text>`,
+    esports: `<path class="d" d="M28 56V46A32 32 0 0 1 92 46V56"/>
+      <path class="d" d="M22 50H34A4 4 0 0 1 38 54V70A4 4 0 0 1 34 74H22A4 4 0 0 1 18 70V54A4 4 0 0 1 22 50Z"/>
+      <path class="d" d="M86 50H98A4 4 0 0 1 102 54V70A4 4 0 0 1 98 74H86A4 4 0 0 1 82 70V54A4 4 0 0 1 86 50Z"/>
+      <path class="d accent" d="M30 74Q34 84 52 84"/><circle class="dot" cx="55" cy="84" r="3.5"/>`,
+  };
+
+  function renderSideDoodles() {
+    const host = $('#aboutSides');
+    if (!host) return;
+    const order = (P.sideOrder || Object.keys(P.sides || {})).filter((k) => P.sides[k]);
+    host.hidden = !order.length;
+    $('#aboutSidesList').innerHTML = order.map((k, i) =>
+      `<li><a class="side-doodle" href="index.html?p=${esc(pid)}&side=${esc(k)}#highlights" style="--dd:${(i * 0.18).toFixed(2)}s">` +
+        `<svg viewBox="0 0 120 92" aria-hidden="true"><g filter="url(#boil)">${SIDE_DOODLES[k] || ''}</g></svg>` +
+        `<span>${esc(P.sides[k].label)}</span></a></li>`).join('');
+    $$('#aboutSides .d').forEach((p) => p.setAttribute('pathLength', '1'));
+    if (reduced) { host.classList.add('drawn'); return; }
+    const io = new IntersectionObserver(([en]) => {
+      if (en.isIntersecting) { host.classList.add('drawn'); io.disconnect(); }
+    }, { threshold: 0.35 });
+    io.observe(host);
+  }
+
+  // Count a number up from 0 when it scrolls into view (500, 16, ...)
+  function countUpOnView(els) {
+    els.forEach((el) => {
+      const m = el.textContent.trim().match(/^(\d+)(.*)$/);
+      if (!m) return;
+      const target = Number(m[1]);
+      const suffix = m[2];
+      if (reduced) return;
+      el.textContent = `0${suffix}`;
+      const io = new IntersectionObserver(([en]) => {
+        if (!en.isIntersecting) return;
+        io.disconnect();
+        const t0 = performance.now();
+        const dur = 1500;
+        const step = (t) => {
+          const k = Math.min(1, (t - t0) / dur);
+          const eased = k === 1 ? 1 : 1 - Math.pow(2, -10 * k);
+          el.textContent = `${Math.round(target * eased)}${suffix}`;
+          if (k < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      }, { threshold: 0.6 });
+      io.observe(el);
+    });
   }
 
   /* ============================ SHARED ============================ */
@@ -1138,6 +1198,8 @@
       history.replaceState(null, '', location.pathname);
       openPicker(false);
     } else if (SITE.people[fromUrl]) {                         // a shared link straight to someone
+      const wantSide = params.get('side');
+      if (wantSide && P.sides && P.sides[wantSide]) setSide(wantSide, { animate: false });
       history.replaceState(null, '', location.pathname + location.hash);
       enterSite();
       if (target) requestAnimationFrame(() => target.scrollIntoView());
