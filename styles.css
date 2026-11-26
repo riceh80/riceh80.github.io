@@ -957,3 +957,15 @@ a.fun-song[href]:hover .fun-title { text-decoration: underline; text-underline-o
 .page-about .fun-grid, .page-about .stats, .page-about .exp, .page-about .spec-table { margin-top: 36px; }
 .fun-card { min-height: 200px; }
 .fun-main { padding-top: 20px; }
+
+/* About: spacing no longer grows with screen height; smaller slide-in so gaps don't balloon */
+.page-about .a-hero { padding-bottom: clamp(32px, 4vw, 48px); }
+.page-about .a-fun,
+.page-about .a-numbers,
+.page-about .a-exp { padding-bottom: clamp(52px, 6vw, 72px); }
+.page-about .a-specs { padding: clamp(52px, 6vw, 72px) 0; }
+.page-about .contact { padding: clamp(72px, 8vw, 104px) 0; }
+.page-about .reveal { transform: translateY(24px); }
+.page-about .h2.reveal { transform: translateY(24px) scale(.98); }
+.page-about .exp-item.reveal { transform: translateX(-32px); }
+.page-about .reveal.in, .page-about .h2.reveal.in, .page-about .exp-item.reveal.in { transform: none; }
