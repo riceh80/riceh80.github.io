@@ -321,8 +321,24 @@
     if (!url) return null;
     if ((P.privateRepos || []).includes(key)) {
       if (!P.email) return null;
-      const subject = encodeURIComponent(`Access to the ${P.items[key].title} repo`);
-      return { href: `mailto:${P.email}?subject=${subject}`, short: 'Private repo · ask me', long: 'Private repo · ask for access', external: false };
+      const title = P.items[key].title;
+      const slug = url.replace(/^https?:\/\/github\.com\//, '').replace(/\/$/, '');
+      const subject = `Repo access request: ${title}`;
+      const body = [
+        `Hi ${P.name},`,
+        '',
+        `I'd like access to the private GitHub repo for ${title} (${slug}).`,
+        '',
+        'My GitHub username: ',
+        'Why I would like access: ',
+        '',
+        'Thanks,',
+        '[Your name]',
+      ].join('\n');
+      return {
+        href: `mailto:${P.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`,
+        short: 'Private repo · ask me', long: 'Private repo · ask for access', external: false,
+      };
     }
     return { href: url, short: 'GitHub', long: 'View on GitHub', external: true };
   }
@@ -874,8 +890,103 @@
     setPlaying(gal.playing);
   }
 
+  /* ========================= EMAIL CHOOSER =========================
+     Plain mailto: links often do nothing for people who use webmail, so any
+     email link opens a small menu: Gmail, Outlook, Yahoo, the device's mail
+     app, or copy the address. Whatever the link carries (to / subject / body)
+     is filled into the draft; the visitor still has to press send.           */
+  const enc = encodeURIComponent;
+  const MAIL_APPS = [
+    { id: 'gmail', label: 'Gmail', web: true,
+      url: (m) => `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(m.to)}${m.subject ? `&su=${enc(m.subject)}` : ''}${m.body ? `&body=${enc(m.body)}` : ''}` },
+    { id: 'outlook', label: 'Outlook', web: true,
+      url: (m) => `https://outlook.live.com/mail/0/deeplink/compose?to=${enc(m.to)}${m.subject ? `&subject=${enc(m.subject)}` : ''}${m.body ? `&body=${enc(m.body)}` : ''}` },
+    { id: 'yahoo', label: 'Yahoo Mail', web: true,
+      url: (m) => `https://compose.mail.yahoo.com/?to=${enc(m.to)}${m.subject ? `&subject=${enc(m.subject)}` : ''}${m.body ? `&body=${enc(m.body)}` : ''}` },
+    { id: 'app', label: 'Mail app on this device', web: false,
+      url: (m) => `mailto:${m.to}${m.subject || m.body ? '?' : ''}${[m.subject ? `subject=${enc(m.subject)}` : '', m.body ? `body=${enc(m.body)}` : ''].filter(Boolean).join('&')}` },
+  ];
+  let mailMsg = null;
+  let mailOpener = null;
+
+  function parseMailto(href) {
+    const u = new URL(href);
+    return { to: decodeURIComponent(u.pathname), subject: u.searchParams.get('subject') || '', body: u.searchParams.get('body') || '' };
+  }
+
+  function buildMailSheet() {
+    document.body.insertAdjacentHTML('beforeend',
+      `<div class="mail-sheet" id="mailSheet" hidden>
+        <div class="mail-backdrop" data-mail-close></div>
+        <div class="mail-panel" role="dialog" aria-modal="true" aria-labelledby="mailTitle">
+          <p class="mail-title" id="mailTitle">Write with…</p>
+          <p class="mail-sub" id="mailSub"></p>
+          <div class="mail-options" id="mailOptions"></div>
+          <button class="mail-cancel" type="button" data-mail-close>Cancel</button>
+        </div>
+      </div>`);
+    $$('#mailSheet [data-mail-close]').forEach((el) => el.addEventListener('click', closeMail));
+  }
+
+  function openMail(href) {
+    mailMsg = parseMailto(href);
+    mailOpener = document.activeElement;
+    let last = null;
+    try { last = localStorage.getItem('mail-app'); } catch (e) { /* private mode */ }
+    const apps = [...MAIL_APPS].sort((a, b) => (b.id === last) - (a.id === last));
+    $('#mailSub').innerHTML = mailMsg.subject
+      ? `Opens a draft to <b>${esc(mailMsg.to)}</b> with the subject and message filled in. Add your details, then hit send.`
+      : `Opens a new email to <b>${esc(mailMsg.to)}</b>. You write the rest.`;
+    $('#mailOptions').innerHTML = apps.map((a) =>
+      `<button type="button" class="mail-opt" data-app="${a.id}"><span>${esc(a.label)}</span>${a.id === last ? '<small>last used</small>' : ''}</button>`
+    ).join('') + '<button type="button" class="mail-opt mail-copy" data-app="copy"><span>Copy email address</span></button>';
+    $$('#mailOptions .mail-opt').forEach((b) => b.addEventListener('click', () => pickMail(b)));
+    $('#mailSheet').hidden = false;
+    body.classList.add('sheet-open');
+    $('#mailOptions .mail-opt').focus({ preventScroll: true });
+  }
+
+  function pickMail(btn) {
+    const id = btn.dataset.app;
+    if (id === 'copy') {
+      const done = () => { btn.querySelector('span').textContent = 'Copied ✓'; setTimeout(closeMail, 900); };
+      if (navigator.clipboard) navigator.clipboard.writeText(mailMsg.to).then(done, () => window.prompt('Copy this email address:', mailMsg.to));
+      else window.prompt('Copy this email address:', mailMsg.to);
+      return;
+    }
+    const app = MAIL_APPS.find((a) => a.id === id);
+    try { localStorage.setItem('mail-app', id); } catch (e) { /* private mode */ }
+    const url = app.url(mailMsg);
+    if (app.web) window.open(url, '_blank', 'noopener');
+    else window.location.href = url;
+    closeMail();
+  }
+
+  function closeMail() {
+    const sheet = $('#mailSheet');
+    if (!sheet || sheet.hidden) return;
+    sheet.hidden = true;
+    body.classList.remove('sheet-open');
+    if (mailOpener && mailOpener.focus) mailOpener.focus({ preventScroll: true });
+  }
+
+  function wireMail() {
+    buildMailSheet();
+    document.addEventListener('click', (ev) => {
+      const a = ev.target.closest('a[href^="mailto:"]');
+      if (!a) return;
+      ev.preventDefault();
+      ev.stopPropagation();
+      openMail(a.getAttribute('href'));
+    });
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && !$('#mailSheet').hidden) { ev.stopImmediatePropagation(); closeMail(); }
+    }, true);
+  }
+
   /* ============================== BOOT ============================== */
   wireShared();
+  wireMail();
   setupReveals();
 
   if (isHome) {
