@@ -60,8 +60,8 @@
   })();
 
   const arrow = (d, head) => `<path class="ink thin draw" d="${d}"/><path class="ink thin draw" d="${head}"/>`;
-  const note = (text, x, y, size = 24, extra = '', cls = '') =>
-    `<text class="hand ${cls}" x="${x}" y="${y}" font-size="${size}" ${extra}>${esc(text)}</text>`;
+  const note = (text, x, y, size = 24, extra = '', cls = '') => (!text ? '' :
+    `<text class="hand ${cls}" x="${x}" y="${y}" font-size="${size}" ${extra}>${esc(text)}</text>`);
 
   const DOODLES = {
     crate(it) {
@@ -113,7 +113,7 @@
         </g>
         ${note(it.note || '', 10, 50)}
         ${arrow('M64 60 C84 70 98 84 108 104', 'M98 100 L108 105 L110 94')}
-        ${note('', 322, 286, 30, 'text-anchor="middle"', 'red-fill d20-result')}`;
+        ${note('rolled a 20', 322, 286, 30, 'text-anchor="middle"', 'red-fill d20-result')}`;
     },
     browser(it) {
       return `
@@ -216,6 +216,36 @@
     const fn = DOODLES[it.doodle];
     if (!fn) return '';
     return `<svg class="doodle doodle-${it.doodle}" viewBox="0 0 400 300" aria-hidden="true"><g filter="url(#boil)">${fn(it)}</g></svg>`;
+  }
+
+  // Fit a sketch inside its box: measure everything drawn (notes included), then
+  // set the viewBox to that area plus a margin. The CSS box keeps it clear of the
+  // card's edges, label and title, so nothing touches or runs off the card.
+  function fitDoodle(svg) {
+    if (!svg.isConnected || !svg.getClientRects().length) return;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return;
+    const inv = ctm.inverse();
+    let x1 = Infinity; let y1 = Infinity; let x2 = -Infinity; let y2 = -Infinity;
+    svg.querySelectorAll('path, rect, circle, ellipse, polygon, line, text').forEach((el) => {
+      if (el.closest('.hop, .hop2') || el.getAttribute('fill') === 'transparent') return;
+      const r = el.getBoundingClientRect();
+      if (!r.width && !r.height) return;
+      [[r.left, r.top], [r.right, r.bottom]].forEach(([x, y]) => {
+        const pt = new DOMPoint(x, y).matrixTransform(inv);
+        x1 = Math.min(x1, pt.x); y1 = Math.min(y1, pt.y); x2 = Math.max(x2, pt.x); y2 = Math.max(y2, pt.y);
+      });
+    });
+    if (!isFinite(x1)) return;
+    const pad = 12;
+    svg.setAttribute('viewBox', `${(x1 - pad).toFixed(1)} ${(y1 - pad).toFixed(1)} ${(x2 - x1 + pad * 2).toFixed(1)} ${(y2 - y1 + pad * 2).toFixed(1)}`);
+    svg.dataset.fitted = '1';
+  }
+  function fitDoodles(root = document) {
+    $$('svg.doodle', root).forEach((svg) => {
+      svg.setAttribute('viewBox', '0 0 400 300');   // measure from the original drawing space
+      fitDoodle(svg);
+    });
   }
 
   // draw the lines on when a card scrolls into view
@@ -619,6 +649,7 @@
       const live = P.links && P.links[k];
       if (live) li.insertAdjacentHTML('beforeend', tryPill(live, it.linkLabel));
       track.appendChild(li);
+      fitDoodles(li);
     });
     const n = slides().length;
     $('#dots').innerHTML = Array.from({ length: n }, (_, i) =>
@@ -731,6 +762,7 @@
         itemLinks(key));
       $('.item-more', li).addEventListener('click', () => openDetail(key));
       list.appendChild(li);
+      fitDoodles(li);
       revealer && revealer.observe(li);
     });
   }
@@ -746,6 +778,7 @@
     holder.innerHTML = '';
     const media = mediaEl(key, { video: true });
     holder.appendChild(media);
+    fitDoodles(holder);
     $('#modalTitle').textContent = it.title;
     $('#modalStatus').textContent = it.status;
     $('#modalDate').textContent = it.date;
@@ -1057,6 +1090,9 @@
   setGutter();
   // re-measure when the page width changes, e.g. when the scrollbar appears after the intro
   if (window.ResizeObserver) new ResizeObserver(setGutter).observe(document.documentElement);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => fitDoodles());
+  let refit = 0;
+  window.addEventListener('resize', () => { clearTimeout(refit); refit = setTimeout(() => fitDoodles(), 150); });
   wireShared();
   wireMail();
   setupReveals();

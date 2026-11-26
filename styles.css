@@ -793,3 +793,12 @@ body.sheet-open { overflow: hidden; }
   /* project cards are landscape on phones: keep the sketch top-right, clear of the title */
   .lu-media .doodle { width: 56%; right: 2%; top: 15%; }
 }
+
+/* ---------- sketches always sit inside a safe area of the card ----------
+   (the script fits each drawing, notes included, inside this box) */
+.media .doodle { right: auto; left: 46%; top: 13%; width: 49%; height: 57%; }
+.lu-media .media .doodle { left: 7%; top: 19%; width: 86%; height: 50%; }
+@media (max-width: 734px) {
+  .slide-media .media .doodle { left: 7%; top: 13%; width: 86%; height: 52%; }
+  .lu-media .media .doodle { left: 45%; top: 15%; width: 48%; height: 52%; }
+}
