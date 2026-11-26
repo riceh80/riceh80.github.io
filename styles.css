@@ -816,3 +816,31 @@ body.sheet-open { overflow: hidden; }
   .gallery-controls { gap: 10px; }
   .gallery-controls .gal-arrow { width: 44px; height: 44px; }
 }
+
+/* ---------- About: story + "at a glance" under the name ---------- */
+.a-hero { padding-bottom: clamp(80px, 12vh, 130px); }
+.a-intro {
+  display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 40px 72px; align-items: start;
+  margin-top: clamp(36px, 5vh, 56px);
+}
+.a-story {
+  max-width: 600px;
+  font-size: clamp(20px, 1.9vw, 25px);
+  line-height: 1.5;
+  letter-spacing: -.005em;
+  color: var(--ink);
+}
+.a-story strong { color: var(--red-text); font-weight: 600; }
+.a-glance-title { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 10px; }
+.a-facts { border-top: 1px solid var(--line); }
+.a-facts > div { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+.a-facts dt { font-size: 15px; color: var(--ink-2); }
+.a-facts dd { font-size: 16px; font-weight: 500; color: var(--ink); }
+@media (max-width: 834px) {
+  .a-intro { grid-template-columns: 1fr; gap: 36px; }
+}
+@media (max-width: 734px) {
+  .a-story { font-size: 19px; }
+  .a-facts > div { grid-template-columns: 100px 1fr; }
+}

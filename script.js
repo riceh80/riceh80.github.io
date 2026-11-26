@@ -822,9 +822,14 @@
   function renderAbout() {
     const a = P.about || {};
     $('#aboutName').textContent = `${P.fullName}.`;
-    $('#aboutIntro').textContent = a.intro || '';
-    $('#storySection').hidden = !a.story;
-    if (a.story) buildScrub(a.story);
+    // the story, with [[marked]] words highlighted
+    $('#aboutStory').innerHTML = (a.story || '').split(/(\[\[.+?\]\])/).map((chunk) => {
+      const m = chunk.match(/^\[\[(.+)\]\]$/);
+      return m ? `<strong>${esc(m[1])}</strong>` : esc(chunk);
+    }).join('');
+    $('#aboutStory').hidden = !a.story;
+    $('#aboutFacts').innerHTML = (a.facts || []).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
+    $('#aboutGlance').hidden = !(a.facts && a.facts.length);
     $('#statsSection').hidden = !(a.stats && a.stats.length);
     $('#stats').innerHTML = (a.stats || []).map(([n, c], i) =>
       `<div class="stat reveal" style="--d:${i * 0.06}s"><p class="stat-num">${esc(n)}</p><p class="stat-cap">${esc(c)}</p></div>`).join('');

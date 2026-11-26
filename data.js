@@ -228,8 +228,15 @@ window.SITE = {
       },
 
       about: {
-        intro: 'Computer Science at the University at Buffalo, Class of 2027. I make games, build for the web, teach code and lead a 500‑member esports community.',
-        // Words in [[double brackets]] light up red.
+        // Quick facts shown beside the story at the top of the About page.
+        facts: [
+          ['Studying', 'Computer Science, University at Buffalo'],
+          ['Graduating', 'May 2027'],
+          ['Currently', 'Software Developer at EVU LLC'],
+          ['Building', 'Totally Legal Cargo, in Godot'],
+          ['Speaks', 'English and Cantonese'],
+        ],
+        // Words in [[double brackets]] are highlighted in red.
         story: 'I’m a computer science student at the University at Buffalo. I build [[games]] in Godot, Unity and Unreal Engine 5, and [[websites]] with HTML, CSS and JavaScript. I’ve taught programming to a class of [[16 students,]] and I lead a [[500‑member]] Valorant community on campus.',
         stats: [
           ['500', 'members in the UB Valorant community I lead'],
