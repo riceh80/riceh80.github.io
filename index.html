@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Profiles</title>
+  <meta name="description" content="Pick a profile to see their work, experience and how to reach them.">
+  <meta name="theme-color" content="#ffffff">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect x='20' y='16' width='60' height='46' rx='4' fill='%23161618' stroke='%23f4ecdc' stroke-width='6'/%3E%3Ccircle cx='50' cy='39' r='7' fill='%23e50914'/%3E%3Cpath d='M6 72 H94 L86 84 H14 Z' fill='%23e50914'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Caveat:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=14">
+</head>
+<body class="page-home intro-active">
+
+  <!-- ============ INTRO: a hand-drawn laptop opens, powers on, types "Welcome", then we zoom into the screen ============ -->
+  <div id="intro" class="intro" hidden>
+    <div class="intro-stage">
+      <div class="rig" id="rig" data-frame="0">
+        <svg class="laptop" viewBox="0 0 400 300" aria-hidden="true">
+          <defs>
+            <clipPath id="screenClip"><path d="M115 204 L285 204 L278 66 L122 66 Z"/></clipPath>
+          </defs>
+          <g class="boil-g" filter="url(#boil)">
+            <!-- desk + coffee -->
+            <path class="chalk thin" d="M18 266 C120 262 280 269 384 264"/>
+            <g class="mug">
+              <path d="M338 226 h30 v26 c0 8 -6 12 -15 12 c-9 0 -15 -4 -15 -12 z" fill="#161618"/>
+              <path class="chalk" d="M338 226 h30 v26 c0 8 -6 12 -15 12 c-9 0 -15 -4 -15 -12 z"/>
+              <path class="chalk thin" d="M368 233 c11 0 11 14 0 14"/>
+              <g class="fa"><path class="chalk thin" d="M347 218 c-6 -8 6 -12 0 -20 M359 218 c-6 -8 6 -12 0 -20"/></g>
+              <g class="fb"><path class="chalk thin" d="M347 218 c6 -8 -6 -12 0 -20 M359 218 c6 -8 -6 -12 0 -20"/></g>
+            </g>
+            <!-- base -->
+            <path d="M104 212 L296 212 L330 250 L70 250 Z" fill="#161618"/>
+            <path class="chalk" d="M104 212 L296 212 L330 250 L70 250 Z"/>
+            <path class="chalk" d="M70 250 L75 261 L325 261 L330 250"/>
+            <path class="chalk thin keys" d="M120 219 H280 M114 227 H286 M108 235 H292"/>
+            <path class="chalk thin" d="M176 240 L224 240 L226 247 L174 247 Z"/>
+            <circle class="led" cx="200" cy="256" r="2.8"/>
+            <!-- lid, drawn in four positions -->
+            <g class="lid f0">
+              <path d="M104 212 L296 212 L330 250 L70 250 Z" fill="#232326"/><path class="chalk" d="M104 212 L296 212 L330 250 L70 250 Z"/>
+              <path class="chalk thin" d="M78 246 L322 246"/>
+            </g>
+            <g class="lid f1">
+              <path d="M104 212 L296 212 L325 170 L75 170 Z" fill="#232326"/><path class="chalk" d="M104 212 L296 212 L325 170 L75 170 Z"/>
+              <path d="M200 183 l3 6 6 1 -4 4 1 6 -6 -3 -6 3 1 -6 -4 -4 6 -1 z" fill="#e2231a"/>
+            </g>
+            <g class="lid f2">
+              <path d="M104 212 L296 212 L313 101 L87 101 Z" fill="#232326"/><path class="chalk" d="M104 212 L296 212 L313 101 L87 101 Z"/>
+              <path d="M200 146 l4 8 8 1 -6 6 2 8 -8 -4 -8 4 2 -8 -6 -6 8 -1 z" fill="#e2231a"/>
+            </g>
+            <g class="lid f3">
+              <path d="M104 212 L296 212 L287 57 L113 57 Z" fill="#161618"/>
+              <path class="chalk" d="M104 212 L296 212 L287 57 L113 57 Z"/>
+              <path class="screen" d="M115 204 L285 204 L278 66 L122 66 Z" fill="#0b0b0c"/>
+              <path class="chalk thin" d="M115 204 L285 204 L278 66 L122 66 Z"/>
+              <g clip-path="url(#screenClip)"><rect class="crt" x="110" y="60" width="180" height="150" fill="#f4ecdc"/></g>
+            </g>
+          </g>
+          <text class="screen-text" id="screenText" x="200" y="142" text-anchor="middle"></text>
+        </svg>
+      </div>
+    </div>
+    <button class="skip-intro" id="skipIntro" type="button">Skip Intro</button>
+  </div>
+
+  <!-- ============ WELCOME + "WHO DO YOU WANT TO LOOK AT?" ============ -->
+  <div id="picker" class="picker" hidden>
+    <header class="picker-top">
+      <svg class="mark" viewBox="0 0 100 80" aria-label="Home" role="img">
+        <g filter="url(#boil)">
+          <path d="M22 8 H78 V54 H22 Z" fill="#161618"/><path class="chalk" d="M22 8 H78 V54 H22 Z"/>
+          <path d="M8 62 H92 L86 71 H14 Z" fill="#e2231a"/><path class="chalk" d="M8 62 H92 L86 71 H14 Z"/>
+          <circle cx="50" cy="31" r="6" fill="#e2231a"/>
+        </g>
+      </svg>
+    </header>
+    <div class="picker-center">
+      <h1 class="welcome" id="welcome">Welcome</h1>
+      <p class="picker-q">Who do you want to look at?</p>
+      <ul class="people" id="people"></ul>
+    </div>
+  </div>
+
+  <!-- ============ PERSON PAGE ============ -->
+  <div id="site" class="site">
+    <nav class="nav" id="nav" aria-label="Main">
+      <div class="nav-inner">
+        <a class="nav-title" href="#top" data-name>Profile</a>
+        <div class="nav-right">
+          <button class="nav-toggle" id="navToggle" type="button" aria-expanded="false" aria-controls="navLinks" aria-label="Show sections">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5"/></svg>
+          </button>
+          <ul class="nav-links" id="navLinks">
+            <li><a href="#highlights">Highlights</a></li>
+            <li><a href="#projects" id="navProjects">Projects</a></li>
+            <li><a href="about.html" data-about-link>About</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+          <button class="person-chip" id="personChip" type="button" aria-label="Switch profile">
+            <span class="avatar avatar-sm" id="chipAvatar"></span>
+            <span class="person-chip-label" id="chipLabel"></span>
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <main>
+      <!-- HERO -->
+      <section class="hero" id="top" data-theme="light">
+        <div class="wrap hero-grid" id="heroGrid">
+          <div class="hero-text">
+            <div class="tabs-row">
+              <div class="segmented segmented-light" id="heroTabs" role="group" aria-label="Choose a side"></div>
+              <span class="hand-note" aria-hidden="true">&larr; pick a side</span>
+            </div>
+            <div id="heroCopy">
+              <h1 class="hero-title" id="heroTitle"></h1>
+              <p class="hero-sub" id="heroSub"></p>
+            </div>
+            <div class="hero-actions">
+              <a class="btn btn-red" href="#highlights">See highlights</a>
+              <a class="link" href="about.html" data-about-link>About me</a>
+              <a class="link" href="#" id="heroResume" download>Résumé</a>
+            </div>
+          </div>
+          <figure class="hero-photo" id="heroPhoto" hidden></figure>
+        </div>
+      </section>
+
+      <!-- HIGHLIGHTS -->
+      <section class="highlights" id="highlights" data-theme="dark">
+        <div class="wrap hl-head">
+          <h2 class="h2">Highlights.</h2>
+          <div class="segmented" id="hlTabs" role="group" aria-label="Choose a side"></div>
+        </div>
+        <ul class="gallery" id="gallery"></ul>
+        <div class="gallery-controls">
+          <div class="dots" id="dots"></div>
+          <button class="playpause" id="playPause" type="button" aria-label="Pause">
+            <svg class="i-pause" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4h3v12H6zM11 4h3v12h-3z"/></svg>
+            <svg class="i-play" viewBox="0 0 20 20" aria-hidden="true"><path d="M6 4l10 6-10 6z"/></svg>
+          </button>
+        </div>
+      </section>
+
+      <!-- ALL PROJECTS -->
+      <section class="projects" id="projects" data-theme="light">
+        <div class="wrap">
+          <h2 class="h2 reveal">All projects.</h2>
+          <p class="lede reveal">Newest first. Hover a card, open it for the full story.</p>
+          <ul class="lineup" id="lineup"></ul>
+        </div>
+      </section>
+
+      <!-- ABOUT TEASER -->
+      <section class="teaser" data-theme="light">
+        <div class="wrap teaser-grid reveal">
+          <h2 class="h2" id="teaserTitle">More about me.</h2>
+          <div>
+            <p class="teaser-text">Experience, skills, education and the numbers behind them, all on one page.</p>
+            <a class="btn btn-ghost" href="about.html" data-about-link>Read the full story</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- CONTACT -->
+      <section class="contact" id="contact" data-theme="dark">
+        <div class="wrap reveal">
+          <p class="eyebrow eyebrow-dark">Contact</p>
+          <h2 class="contact-title">Let’s talk.</h2>
+          <a class="contact-email" id="contactEmail" href="#"></a>
+          <div class="contact-links" id="contactLinks"></div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <div class="footer-links">
+          <button type="button" id="replayIntro">Replay intro</button>
+          <button type="button" id="switchPerson">Switch profile</button>
+          <a href="about.html" data-about-link>About</a>
+        </div>
+        <p id="copyright"></p>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ============ DETAIL WINDOW ============ -->
+  <div class="modal" id="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+      <button class="modal-close" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5 5 15"/></svg>
+      </button>
+      <div class="modal-media" id="modalMedia"></div>
+      <div class="modal-body">
+        <div>
+          <h3 class="modal-title" id="modalTitle"></h3>
+          <p class="modal-meta"><span class="meta-status" id="modalStatus"></span><span class="meta-date" id="modalDate"></span></p>
+          <p class="modal-summary" id="modalSummary"></p>
+          <ul class="modal-points" id="modalPoints"></ul>
+          <div class="modal-links">
+            <a class="btn btn-red" id="modalLink" href="#" target="_blank" rel="noopener" hidden>Open</a>
+            <a class="btn btn-ghost-dark" id="modalRepo" href="#" target="_blank" rel="noopener" hidden>View on GitHub</a>
+          </div>
+        </div>
+        <dl class="modal-facts" id="modalFacts"></dl>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js?v=14"></script>
+  <script src="script.js?v=14"></script>
+</body>
+</html>
