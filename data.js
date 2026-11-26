@@ -46,11 +46,11 @@ window.SITE = {
         tlc: 'https://github.com/riceh80/Totally-Legal-Cargo',
         dungeon: 'https://github.com/riceh80/DnDGame',
         valentine: 'https://github.com/riceh80/noob',
-        rogue: '',
+        rogue: 'https://github.com/QuiteKewl/the-game',
       },
       // Repos that are private on GitHub show "Private repo · ask me" (it opens an email
       // to you) instead of a GitHub link. Make a repo public, then remove its key here.
-      privateRepos: ['tlc', 'dungeon'],
+      privateRepos: ['tlc', 'dungeon', 'rogue'],
 
       sideOrder: ['gamedev', 'webdev', 'teacher', 'esports'],
       sides: {

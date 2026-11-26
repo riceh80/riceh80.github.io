@@ -587,6 +587,11 @@
       cap.className = 'slide-caption';
       cap.innerHTML = `<strong>${esc(it.title)}.</strong> ${esc(it.caption)} <button type="button" class="slide-more">More&nbsp;›</button>`;
       $('.slide-more', cap).addEventListener('click', () => openDetail(k));
+      const repo = repoLink(k);
+      if (repo) {
+        cap.insertAdjacentHTML('beforeend',
+          ` <a class="slide-repo${repo.external ? '' : ' is-private'}" href="${esc(repo.href)}"${repo.external ? ' target="_blank" rel="noopener"' : ''}>${esc(repo.short)}&nbsp;›</a>`);
+      }
       li.append(btn, cap);
       const live = P.links && P.links[k];
       if (live) li.insertAdjacentHTML('beforeend', tryPill(live, it.linkLabel));
