@@ -109,7 +109,7 @@
           <path class="ink draw" d="M${P(A)} L${P(B)} L${P(C)} Z"/>
           <path class="ink thin draw" d="M${P(A)} L${P(H.t)} M${P(A)} L${P(H.tl)} M${P(A)} L${P(H.tr)} M${P(B)} L${P(H.tr)} M${P(B)} L${P(H.br)} M${P(B)} L${P(H.b)} M${P(C)} L${P(H.bl)} M${P(C)} L${P(H.tl)} M${P(C)} L${P(H.b)}"/>
           <rect x="110" y="48" width="180" height="204" fill="transparent"/>
-          ${note('20', 200, 168, 46, 'text-anchor="middle"', 'd20-num')}
+          ${note('20', 194.5, 167, 46, 'text-anchor="middle"', 'd20-num')}
         </g>
         ${note(it.note || '', 10, 50)}
         ${arrow('M64 60 C84 70 98 84 108 104', 'M98 100 L108 105 L110 94')}
