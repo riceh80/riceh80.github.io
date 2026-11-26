@@ -972,3 +972,6 @@ a.fun-song[href]:hover .fun-title { text-decoration: underline; text-underline-o
 
 /* About: tight gap between the intro and "Off the clock." */
 .page-about .a-hero { padding-bottom: clamp(28px, 3.4vw, 40px); }
+
+/* while the highlights glide, snapping waits so it can slide smoothly */
+.gallery.gliding { scroll-snap-type: none; scroll-behavior: auto; }

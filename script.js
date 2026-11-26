@@ -662,6 +662,30 @@
     setActive(0);
   }
 
+  // Slide the highlights to a position with our own easing, so it always glides
+  // (some browsers / Linux setups turn built-in smooth scrolling into a jump).
+  function glide(track, to) {
+    cancelAnimationFrame(gal.anim);
+    const from = track.scrollLeft;
+    const dist = to - from;
+    if (reduced || Math.abs(dist) < 1) { track.scrollLeft = to; return; }
+    const dur = Math.min(900, 520 + Math.abs(dist) * 0.12);
+    const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const t0 = performance.now();
+    track.classList.add('gliding');
+    const step = (now) => {
+      const k = Math.min(1, (now - t0) / dur);
+      track.scrollLeft = from + dist * ease(k);
+      if (k < 1) gal.anim = requestAnimationFrame(step);
+      else { track.classList.remove('gliding'); onTrackScroll(); }
+    };
+    gal.anim = requestAnimationFrame(step);
+  }
+  function stopGlide() {
+    cancelAnimationFrame(gal.anim);
+    $('#gallery').classList.remove('gliding');
+  }
+
   function goTo(i, byUser) {
     const all = slides();
     if (!all.length) return;
@@ -669,7 +693,7 @@
     const track = $('#gallery');
     const pad = parseFloat(getComputedStyle(track).paddingLeft) || 0;
     gal.target = all[n].offsetLeft - pad;      // where we're gliding to; scroll tracking waits for it
-    track.scrollTo({ left: gal.target, behavior: reduced ? 'auto' : 'smooth' });
+    glide(track, gal.target);
     setActive(n);
     if (byUser) gal.elapsed = 0;
   }
@@ -1157,7 +1181,7 @@
     const track = $('#gallery');
     let st = 0;
     track.addEventListener('scroll', () => { clearTimeout(st); st = setTimeout(onTrackScroll, 80); }, { passive: true });
-    ['pointerdown', 'wheel', 'touchstart'].forEach((t) => track.addEventListener(t, () => { gal.elapsed = 0; gal.target = null; }, { passive: true }));
+    ['pointerdown', 'wheel', 'touchstart'].forEach((t) => track.addEventListener(t, () => { gal.elapsed = 0; gal.target = null; stopGlide(); }, { passive: true }));
 
     // arrows
     $('#galPrev').addEventListener('click', () => goTo(gal.idx - 1, true));
