@@ -228,16 +228,16 @@ window.SITE = {
       },
 
       about: {
-        // Quick facts shown beside the story at the top of the About page.
-        facts: [
-          ['Studying', 'Computer Science, University at Buffalo'],
-          ['Graduating', 'May 2027'],
-          ['Currently', 'Software Developer at EVU LLC'],
-          ['Building', 'Totally Legal Cargo, in Godot'],
-          ['Speaks', 'English and Cantonese'],
+        // Handwritten notes around your name at the top of the About page
+        // (up to four: top-left, top-right, bottom-left, bottom-right).
+        notes: [
+          ['studying CS at UB', 'class of ’27'],
+          ['dev @ EVU LLC', 'since Oct 2026'],
+          ['building Totally Legal Cargo', 'in Godot'],
+          ['speaks English', '+ Cantonese'],
         ],
         // Words in [[double brackets]] are highlighted in red.
-        story: 'I’m a computer science student at the University at Buffalo. I build [[games]] in Godot, Unity and Unreal Engine 5, and [[websites]] with HTML, CSS and JavaScript. I’ve taught programming to a class of [[16 students,]] and I lead a [[500‑member]] Valorant community on campus.',
+        story: 'Hey, I’m Darren. I’m a CS student at UB who likes making things, mostly [[games]] in Godot, Unity and Unreal, plus [[websites]] in HTML, CSS and JavaScript. I’ve taught a class of [[16 students]] to code, and on the side I run UB’s [[500‑member]] Valorant community.',
         stats: [
           ['500', 'members in the UB Valorant community I lead'],
           ['16', 'students in the Python, ELA and math class I taught'],

@@ -817,30 +817,61 @@ body.sheet-open { overflow: hidden; }
   .gallery-controls .gal-arrow { width: 44px; height: 44px; }
 }
 
-/* ---------- About: story + "at a glance" under the name ---------- */
+/* ---------- About: name with handwritten notes pointing at it ---------- */
 .a-hero { padding-bottom: clamp(80px, 12vh, 130px); }
-.a-intro {
-  display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
-  gap: 40px 72px; align-items: start;
-  margin-top: clamp(36px, 5vh, 56px);
+.a-sketch {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-areas: "tl eb tr" ". name ." "bl . br";
+  column-gap: clamp(12px, 2vw, 28px);
+  row-gap: 6px;
+  align-items: center;
 }
+.a-eyebrow { grid-area: eb; justify-self: center; align-self: end; margin: 0 0 4px; }
+.a-name { grid-area: name; text-align: center; white-space: nowrap; }
+.note { display: flex; flex-direction: column; gap: 2px; max-width: 250px; }
+.note-tl { grid-area: tl; justify-self: end; align-self: end; align-items: flex-end; text-align: right; transform: rotate(-4deg); }
+.note-tr { grid-area: tr; justify-self: start; align-self: end; align-items: flex-start; text-align: left; transform: rotate(3deg); }
+.note-bl { grid-area: bl; justify-self: end; align-self: start; align-items: flex-end; text-align: right; transform: rotate(2deg); }
+.note-br { grid-area: br; justify-self: start; align-self: start; align-items: flex-start; text-align: left; transform: rotate(-3deg); }
+.note-bl .note-arrow, .note-br .note-arrow { order: -1; }
+.note-text {
+  font-family: "Caveat", "Comic Sans MS", cursive;
+  font-weight: 700;
+  font-size: clamp(22px, 2.1vw, 29px);
+  line-height: 1.05;
+  color: var(--ink);
+}
+.note-text span { display: block; font-weight: 500; font-size: .82em; color: var(--ink-2); }
+.note-arrow { width: clamp(58px, 6vw, 84px); height: auto; overflow: visible; color: var(--red); }
+.note-arrow path { fill: none; stroke: currentColor; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; }
+.a-sketch .draw { stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset .9s cubic-bezier(.5, 0, .3, 1); }
+.a-sketch .note-arrow path:last-child { transition-delay: .7s; transition-duration: .3s; }
+.a-sketch.drawn .draw { stroke-dashoffset: 0; }
+.note { opacity: 0; transition: opacity .6s ease; }
+.a-sketch.drawn .note { opacity: 1; }
+.a-sketch.drawn .note-tr { transition-delay: .12s; }
+.a-sketch.drawn .note-bl { transition-delay: .24s; }
+.a-sketch.drawn .note-br { transition-delay: .36s; }
 .a-story {
-  max-width: 600px;
-  font-size: clamp(20px, 1.9vw, 25px);
+  max-width: 660px;
+  margin: clamp(44px, 7vh, 72px) auto 0;
+  text-align: center;
+  font-size: clamp(20px, 1.9vw, 24px);
   line-height: 1.5;
-  letter-spacing: -.005em;
   color: var(--ink);
 }
 .a-story strong { color: var(--red-text); font-weight: 600; }
-.a-glance-title { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); margin-bottom: 10px; }
-.a-facts { border-top: 1px solid var(--line); }
-.a-facts > div { display: grid; grid-template-columns: 110px 1fr; gap: 16px; padding: 13px 0; border-bottom: 1px solid var(--line); }
-.a-facts dt { font-size: 15px; color: var(--ink-2); }
-.a-facts dd { font-size: 16px; font-weight: 500; color: var(--ink); }
-@media (max-width: 834px) {
-  .a-intro { grid-template-columns: 1fr; gap: 36px; }
-}
 @media (max-width: 734px) {
-  .a-story { font-size: 19px; }
-  .a-facts > div { grid-template-columns: 100px 1fr; }
+  .a-sketch {
+    grid-template-columns: 1fr 1fr;
+    grid-template-areas: "eb eb" "tl tr" "name name" "bl br";
+    row-gap: 4px; column-gap: 26px;
+  }
+  .a-eyebrow { margin-bottom: 18px; }
+  .a-name { font-size: clamp(44px, 13vw, 60px); margin: 6px 0; }
+  .note { max-width: none; }
+  .note-text { font-size: 19px; }
+  .note-arrow { width: 50px; }
+  .a-story { font-size: 18px; text-align: left; margin-top: 40px; }
 }

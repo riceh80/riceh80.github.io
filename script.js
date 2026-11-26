@@ -828,8 +828,27 @@
       return m ? `<strong>${esc(m[1])}</strong>` : esc(chunk);
     }).join('');
     $('#aboutStory').hidden = !a.story;
-    $('#aboutFacts').innerHTML = (a.facts || []).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('');
-    $('#aboutGlance').hidden = !(a.facts && a.facts.length);
+    // handwritten notes with hand-drawn arrows pointing at the name
+    const ARROWS = {
+      tl: ['M8 6C34 8 58 22 80 50', 'M67 48L80 51L79 37'],
+      tr: ['M82 6C56 8 32 22 10 50', 'M23 48L10 51L11 37'],
+      bl: ['M8 54C34 52 58 38 80 10', 'M67 12L80 9L79 23'],
+      br: ['M82 54C56 52 32 38 10 10', 'M23 12L10 9L11 23'],
+    };
+    const sketch = $('#aboutSketch');
+    $$('.note', sketch).forEach((n) => n.remove());
+    (a.notes || []).slice(0, 4).forEach(([line, sub], i) => {
+      const pos = ['tl', 'tr', 'bl', 'br'][i];
+      const [shaft, head] = ARROWS[pos];
+      sketch.insertAdjacentHTML('beforeend',
+        `<div class="note note-${pos}">` +
+          `<p class="note-text">${esc(line)}${sub ? `<span>${esc(sub)}</span>` : ''}</p>` +
+          `<svg class="note-arrow" viewBox="0 0 90 60" aria-hidden="true"><g filter="url(#boil)">` +
+            `<path class="draw" d="${shaft}" pathLength="1"/><path class="draw" d="${head}" pathLength="1"/>` +
+          `</g></svg>` +
+        `</div>`);
+    });
+    requestAnimationFrame(() => setTimeout(() => sketch.classList.add('drawn'), reduced ? 0 : 250));
     $('#statsSection').hidden = !(a.stats && a.stats.length);
     $('#stats').innerHTML = (a.stats || []).map(([n, c], i) =>
       `<div class="stat reveal" style="--d:${i * 0.06}s"><p class="stat-num">${esc(n)}</p><p class="stat-cap">${esc(c)}</p></div>`).join('');
