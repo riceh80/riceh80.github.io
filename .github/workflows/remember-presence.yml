@@ -26,7 +26,8 @@ jobs:
       - name: Save the current game and song to Lanyard KV
         env:
           DISCORD_ID: ${{ vars.DISCORD_ID }}
-          LANYARD_KEY: ${{ secrets.LANYARD_KEY }}
+          # the key can be saved as LANYARD_KEY or DISCORD
+          LANYARD_KEY: ${{ secrets.LANYARD_KEY || secrets.DISCORD }}
         run: |
           if [ -z "$DISCORD_ID" ] || [ -z "$LANYARD_KEY" ]; then
             echo "DISCORD_ID or LANYARD_KEY not set yet; nothing to do."
@@ -52,13 +53,16 @@ jobs:
                 last_track: ($s.track_id // ""),
                 last_song_at: $now
               } else {} end)
-            | with_entries(select(.value != "" and .value != null))')
-          if [ "$patch" = "{}" ]; then
-            echo "Not playing or listening right now."
-            exit 0
-          fi
-          curl -fsS -X PATCH "https://api.lanyard.rest/v1/users/$DISCORD_ID/kv" \
+            | with_entries(select(.value != "" and .value != null))
+            | . + {last_check: $now}')
+          # always saves last_check, so a bad key shows up as a failed run right away
+          code=$(curl -sS -o /tmp/kv.out -w '%{http_code}' -X PATCH "https://api.lanyard.rest/v1/users/$DISCORD_ID/kv" \
             -H "Authorization: $LANYARD_KEY" \
             -H "Content-Type: application/json" \
-            -d "$patch" > /dev/null
+            -d "$patch")
+          if [ "$code" -ge 300 ]; then
+            echo "Lanyard said no (HTTP $code). Check that the secret holds the key from the bot's .apikey reply."
+            jq -r '.error.message // empty' /tmp/kv.out 2>/dev/null || true
+            exit 1
+          fi
           echo "Saved: $(echo "$patch" | jq -r 'keys | join(", ")')"
