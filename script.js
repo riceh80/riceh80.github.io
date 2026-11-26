@@ -989,14 +989,14 @@
     }
   }
 
-  // Live updates over Lanyard's socket; falls back to checking every 30s.
+  // Live updates over Lanyard's socket; falls back to checking every 10s.
   function connectPresence(id) {
     const poll = () => fetch(`https://api.lanyard.rest/v1/users/${encodeURIComponent(id)}`)
       .then((r) => r.json()).then((j) => { if (j.success) { fun.data = j.data; paintPresence(); } })
       .catch(() => {});
     let beat = 0;
     let pollTimer = 0;
-    const startPolling = () => { if (!pollTimer) { poll(); pollTimer = setInterval(() => { if (!document.hidden) poll(); }, 30000); } };
+    const startPolling = () => { if (!pollTimer) { poll(); pollTimer = setInterval(() => { if (!document.hidden) poll(); }, 10000); } };
     try {
       const ws = new WebSocket('wss://api.lanyard.rest/socket');
       ws.onmessage = (ev) => {

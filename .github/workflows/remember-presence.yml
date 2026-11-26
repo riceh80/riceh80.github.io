@@ -1,29 +1,34 @@
 # Remembers your last game and song so the About page can show them while you're offline.
 #
-# Every 10 minutes it reads your Discord status from Lanyard. If you're playing a game or
-# listening on Spotify, it saves that to your Lanyard KV (last_game, last_song, ...).
-# The About page reads those values when you're not playing anything.
+# Starts every 5 minutes (the most often GitHub allows). If you're playing a game or
+# listening on Spotify, it keeps checking every 10 seconds until you stop (up to ~4.5 min,
+# then the next run takes over), saving to your Lanyard KV (last_game, last_song, ...).
+# If you're not doing either, it checks once and stops.
 #
 # Setup (once):
-#   1. Repo Settings → Secrets and variables → Actions → Variables: add DISCORD_ID
-#   2. Same page → Secrets: add LANYARD_KEY (DM ".apikey" to the Lanyard bot on Discord)
+#   1. Repo Settings → Secrets and variables → Actions → Variables: DISCORD_ID
+#   2. Same page → Secrets: LANYARD_KEY (or DISCORD) = the key from the Lanyard bot's .apikey
 # Until both exist, this job just exits.
 
 name: Remember last game and song
 
 on:
   schedule:
-    - cron: '*/10 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions: {}
 
+concurrency:
+  group: remember-presence
+  cancel-in-progress: false
+
 jobs:
   remember:
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 6
     steps:
-      - name: Save the current game and song to Lanyard KV
+      - name: Save the current game and song to Lanyard KV (every 10s while active)
         env:
           DISCORD_ID: ${{ vars.DISCORD_ID }}
           # the key can be saved as LANYARD_KEY or DISCORD
@@ -33,36 +38,55 @@ jobs:
             echo "DISCORD_ID or LANYARD_KEY not set yet; nothing to do."
             exit 0
           fi
-          data=$(curl -fsS "https://api.lanyard.rest/v1/users/$DISCORD_ID")
-          now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-          now_ms=$(( $(date +%s) * 1000 ))
-          patch=$(jq -n \
-            --argjson d "$data" --arg now "$now" --argjson nowms "$now_ms" '
-            ($d.data.activities // [] | map(select(.type == 0)) | first) as $g
-            | (if $d.data.listening_to_spotify then $d.data.spotify else null end) as $s
-            | {}
-            + (if $g then {
-                last_game: $g.name,
-                last_game_at: $now,
-                last_game_minutes: (if $g.timestamps.start then ((($nowms - $g.timestamps.start) / 60000) | floor | tostring) else "" end)
-              } else {} end)
-            + (if $s then {
-                last_song: $s.song,
-                last_artist: ($s.artist // "" | gsub(";"; ",")),
-                last_cover: ($s.album_art_url // ""),
-                last_track: ($s.track_id // ""),
-                last_song_at: $now
-              } else {} end)
-            | with_entries(select(.value != "" and .value != null))
-            | . + {last_check: $now}')
-          # always saves last_check, so a bad key shows up as a failed run right away
-          code=$(curl -sS -o /tmp/kv.out -w '%{http_code}' -X PATCH "https://api.lanyard.rest/v1/users/$DISCORD_ID/kv" \
-            -H "Authorization: $LANYARD_KEY" \
-            -H "Content-Type: application/json" \
-            -d "$patch")
-          if [ "$code" -ge 300 ]; then
-            echo "Lanyard said no (HTTP $code). Check that the secret holds the key from the bot's .apikey reply."
-            jq -r '.error.message // empty' /tmp/kv.out 2>/dev/null || true
-            exit 1
+
+          # build the values to save from one Lanyard reading
+          build_patch() {
+            jq -n --argjson d "$1" --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" --argjson nowms "$(( $(date +%s) * 1000 ))" '
+              ($d.data.activities // [] | map(select(.type == 0)) | first) as $g
+              | (if $d.data.listening_to_spotify then $d.data.spotify else null end) as $s
+              | {}
+              + (if $g then {
+                  last_game: $g.name,
+                  last_game_at: $now,
+                  last_game_minutes: (if $g.timestamps.start then ((($nowms - $g.timestamps.start) / 60000) | floor | tostring) else "" end)
+                } else {} end)
+              + (if $s then {
+                  last_song: $s.song,
+                  last_artist: ($s.artist // "" | gsub(";"; ",")),
+                  last_cover: ($s.album_art_url // ""),
+                  last_track: ($s.track_id // ""),
+                  last_song_at: $now
+                } else {} end)
+              | with_entries(select(.value != "" and .value != null))'
+          }
+
+          save() {
+            code=$(curl -sS -o /tmp/kv.out -w '%{http_code}' -X PATCH "https://api.lanyard.rest/v1/users/$DISCORD_ID/kv" \
+              -H "Authorization: $LANYARD_KEY" -H "Content-Type: application/json" -d "$1")
+            if [ "$code" -ge 300 ]; then
+              echo "Lanyard said no (HTTP $code). Check that the secret holds the key from the bot's .apikey reply."
+              jq -r '.error.message // empty' /tmp/kv.out 2>/dev/null || true
+              exit 1
+            fi
+          }
+
+          # first check: always saves last_check, so a bad key shows up as a failed run
+          patch=$(build_patch "$(curl -fsS "https://api.lanyard.rest/v1/users/$DISCORD_ID")")
+          save "$(echo "$patch" | jq --arg now "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '. + {last_check: $now}')"
+          if [ "$patch" = "{}" ]; then
+            echo "Not playing or listening right now."
+            exit 0
           fi
-          echo "Saved: $(echo "$patch" | jq -r 'keys | join(", ")')"
+          echo "Active: $(echo "$patch" | jq -r '[.last_game, .last_song] | map(select(. != null)) | join(" / ")'); checking every 10s"
+
+          # while you're playing or listening, keep the saved values fresh every 10 seconds
+          for i in $(seq 1 26); do
+            sleep 10
+            patch=$(build_patch "$(curl -fsS "https://api.lanyard.rest/v1/users/$DISCORD_ID")") || continue
+            if [ "$patch" = "{}" ]; then
+              echo "Stopped playing/listening; last values saved."
+              exit 0
+            fi
+            save "$patch"
+          done
+          echo "Still active; the next run continues."
