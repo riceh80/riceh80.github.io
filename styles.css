@@ -775,3 +775,21 @@ body.sheet-open { overflow: hidden; }
   .gal-prev { left: 8px; }
   .gal-next { right: 8px; }
 }
+
+/* ---------- consistent placement ---------- */
+/* one link block under every card: "Learn more" then the repo link */
+.item-links { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 14px; }
+.item-links .link { font-size: 16px; }
+.highlights .item-links .link { color: #ff4048; }
+.highlights .item-links .link-private { color: var(--night-2); }
+.highlights .item-links .link-private:hover { color: var(--night-ink); }
+.lu-item { display: flex; flex-direction: column; }
+.lu-item .item-links { margin-top: auto; padding-top: 16px; }
+/* arrows sit the same distance in from both edges */
+.gal-prev, .gal-next { left: auto; right: auto; }
+.gal-prev { left: max(8px, calc(var(--gutter) / 2 - 24px)); }
+.gal-next { right: max(8px, calc(var(--gutter) / 2 - 24px)); }
+@media (max-width: 734px) {
+  /* project cards are landscape on phones: keep the sketch top-right, clear of the title */
+  .lu-media .doodle { width: 56%; right: 2%; top: 15%; }
+}

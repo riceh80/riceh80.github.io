@@ -363,6 +363,23 @@
     });
   }
 
+  // The same link block under every card (highlights and All projects):
+  // "Learn more", then the repo link (GitHub, or "Private repo · ask me").
+  // Live sites ("Play it" / "Visit …") live in the pill on the card itself.
+  function itemLinks(key) {
+    const r = repoLink(key);
+    const repo = r
+      ? `<a class="link${r.external ? '' : ' link-private'}" href="${esc(r.href)}"${r.external ? ' target="_blank" rel="noopener"' : ''}>${esc(r.short)}</a>`
+      : '';
+    return `<p class="item-links"><button type="button" class="link item-more">Learn more</button>${repo}</p>`;
+  }
+
+  // Line the gallery up with the page's text edge (100vw would count the scrollbar).
+  function setGutter() {
+    const w = document.documentElement.clientWidth;
+    document.documentElement.style.setProperty('--gutter', `${Math.max(22, (w - 1080) / 2)}px`);
+  }
+
   function setupHeroPhoto() {
     const fig = $('#heroPhoto');
     if (!fig) return;
@@ -595,14 +612,10 @@
       btn.addEventListener('click', () => openDetail(k));
       const cap = document.createElement('p');
       cap.className = 'slide-caption';
-      cap.innerHTML = `<strong>${esc(it.title)}.</strong> ${esc(it.caption)} <button type="button" class="slide-more">More&nbsp;›</button>`;
-      $('.slide-more', cap).addEventListener('click', () => openDetail(k));
-      const repo = repoLink(k);
-      if (repo) {
-        cap.insertAdjacentHTML('beforeend',
-          ` <a class="slide-repo${repo.external ? '' : ' is-private'}" href="${esc(repo.href)}"${repo.external ? ' target="_blank" rel="noopener"' : ''}>${esc(repo.short)}&nbsp;›</a>`);
-      }
+      cap.innerHTML = `<strong>${esc(it.title)}.</strong> ${esc(it.caption)}`;
       li.append(btn, cap);
+      li.insertAdjacentHTML('beforeend', itemLinks(k));
+      $('.item-more', li).addEventListener('click', () => openDetail(k));
       const live = P.links && P.links[k];
       if (live) li.insertAdjacentHTML('beforeend', tryPill(live, it.linkLabel));
       track.appendChild(li);
@@ -715,11 +728,8 @@
         `<h3 class="lu-title">${esc(it.title)}</h3>` +
         `<p class="lu-meta">${esc(it.meta)} · ${esc(it.date)}</p>` +
         `<p class="lu-line">${esc(it.line || it.caption)}</p>` +
-        `<p class="lu-links"><button type="button" class="link lu-more">Learn more</button>` +
-        (P.links && P.links[key] ? `<a class="link" href="${esc(P.links[key])}" target="_blank" rel="noopener">${esc(it.linkLabel || 'Open')}</a>` : '') +
-        ((r) => r ? `<a class="link${r.external ? '' : ' link-private'}" href="${esc(r.href)}"${r.external ? ' target="_blank" rel="noopener"' : ''}>${esc(r.short)}</a>` : '')(repoLink(key)) +
-        `</p>`);
-      $('.lu-more', li).addEventListener('click', () => openDetail(key));
+        itemLinks(key));
+      $('.item-more', li).addEventListener('click', () => openDetail(key));
       list.appendChild(li);
       revealer && revealer.observe(li);
     });
@@ -877,7 +887,7 @@
       toggle.setAttribute('aria-expanded', String(open));
     });
     window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
+    window.addEventListener('resize', () => { setGutter(); onScroll(); });
   }
 
   function wireHome() {
@@ -1044,6 +1054,9 @@
   }
 
   /* ============================== BOOT ============================== */
+  setGutter();
+  // re-measure when the page width changes, e.g. when the scrollbar appears after the intro
+  if (window.ResizeObserver) new ResizeObserver(setGutter).observe(document.documentElement);
   wireShared();
   wireMail();
   setupReveals();
