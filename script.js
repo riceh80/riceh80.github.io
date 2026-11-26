@@ -660,7 +660,6 @@
     gal.target = null;
     gal.elapsed = 0;
     setActive(0);
-    $$('.gal-arrow').forEach((b) => { b.hidden = n < 2; });
   }
 
   function goTo(i, byUser) {

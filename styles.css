@@ -802,3 +802,17 @@ body.sheet-open { overflow: hidden; }
   .slide-media .media .doodle { left: 7%; top: 13%; width: 86%; height: 52%; }
   .lu-media .media .doodle { left: 45%; top: 15%; width: 48%; height: 52%; }
 }
+
+/* arrows live in the control bar under the highlights: ‹  • • •  ›  ⏸ */
+.gallery-controls .gal-arrow {
+  position: static; translate: none; left: auto; right: auto; top: auto;
+  width: 52px; height: 52px;
+  background: var(--night-3);
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+}
+.gallery-controls .gal-arrow:hover { background: #333336; transform: none; }
+.gallery-controls .gal-arrow:active { transform: scale(.95); }
+@media (max-width: 734px) {
+  .gallery-controls { gap: 10px; }
+  .gallery-controls .gal-arrow { width: 44px; height: 44px; }
+}
