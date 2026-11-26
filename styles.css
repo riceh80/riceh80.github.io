@@ -946,3 +946,14 @@ a.fun-song[href]:hover .fun-title { text-decoration: underline; text-underline-o
 
 /* things already scrolled past appear finished, without replaying their animation */
 .no-anim, .no-anim * { transition: none !important; }
+
+/* ---------- About: tighter, even spacing between sections ---------- */
+.page-about .a-hero { padding-bottom: clamp(64px, 9vh, 96px); }
+.page-about .a-fun,
+.page-about .a-numbers,
+.page-about .a-exp { padding-bottom: clamp(64px, 9vh, 96px); }
+.page-about .a-specs { padding: clamp(64px, 9vh, 96px) 0; }
+.page-about .contact { padding: clamp(80px, 11vh, 120px) 0; }
+.page-about .fun-grid, .page-about .stats, .page-about .exp, .page-about .spec-table { margin-top: 36px; }
+.fun-card { min-height: 200px; }
+.fun-main { padding-top: 20px; }
