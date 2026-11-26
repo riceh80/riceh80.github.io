@@ -613,8 +613,10 @@
     $$('#dots .dot').forEach((d, i) => d.addEventListener('click', () => goTo(i, true)));
     $('.gallery-controls').hidden = n < 2;
     track.scrollLeft = 0;
+    gal.target = null;
     gal.elapsed = 0;
     setActive(0);
+    $$('.gal-arrow').forEach((b) => { b.hidden = n < 2; });
   }
 
   function goTo(i, byUser) {
@@ -623,7 +625,8 @@
     const n = (i + all.length) % all.length;
     const track = $('#gallery');
     const pad = parseFloat(getComputedStyle(track).paddingLeft) || 0;
-    track.scrollTo({ left: all[n].offsetLeft - pad, behavior: reduced ? 'auto' : 'smooth' });
+    gal.target = all[n].offsetLeft - pad;      // where we're gliding to; scroll tracking waits for it
+    track.scrollTo({ left: gal.target, behavior: reduced ? 'auto' : 'smooth' });
     setActive(n);
     if (byUser) gal.elapsed = 0;
   }
@@ -645,6 +648,11 @@
 
   function onTrackScroll() {
     const track = $('#gallery');
+    if (gal.target != null) {
+      // still gliding after an arrow / dot / drag: don't let the dots jump back mid-way
+      if (Math.abs(track.scrollLeft - gal.target) > 4) return;
+      gal.target = null;
+    }
     const pad = parseFloat(getComputedStyle(track).paddingLeft) || 0;
     let best = 0;
     let bestD = Infinity;
@@ -883,7 +891,43 @@
     const track = $('#gallery');
     let st = 0;
     track.addEventListener('scroll', () => { clearTimeout(st); st = setTimeout(onTrackScroll, 80); }, { passive: true });
-    ['pointerdown', 'wheel', 'touchstart'].forEach((t) => track.addEventListener(t, () => { gal.elapsed = 0; }, { passive: true }));
+    ['pointerdown', 'wheel', 'touchstart'].forEach((t) => track.addEventListener(t, () => { gal.elapsed = 0; gal.target = null; }, { passive: true }));
+
+    // arrows
+    $('#galPrev').addEventListener('click', () => goTo(gal.idx - 1, true));
+    $('#galNext').addEventListener('click', () => goTo(gal.idx + 1, true));
+
+    // click-and-drag with a mouse to swipe (touch and trackpads already swipe natively)
+    let drag = null;
+    let swallowClick = false;
+    track.addEventListener('pointerdown', (e) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      e.preventDefault();                       // no text selection / image dragging
+      drag = { x: e.clientX, left: track.scrollLeft, idx: gal.idx, moved: false };
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      if (!drag.moved && Math.abs(dx) > 6) { drag.moved = true; track.classList.add('dragging'); }
+      if (drag.moved) track.scrollLeft = drag.left - dx;
+    });
+    window.addEventListener('pointerup', (e) => {
+      if (!drag) return;
+      const { moved, idx, x } = drag;
+      drag = null;
+      if (!moved) return;
+      track.classList.remove('dragging');
+      swallowClick = true;                      // a drag shouldn't open the card underneath
+      const dx = e.clientX - x;
+      const step = dx < -50 ? 1 : dx > 50 ? -1 : 0;
+      goTo(Math.max(0, Math.min(slides().length - 1, idx + step)), true);
+    });
+    track.addEventListener('click', (e) => {
+      if (!swallowClick) return;
+      swallowClick = false;
+      e.preventDefault();
+      e.stopPropagation();
+    }, true);
     new IntersectionObserver(([en]) => { gal.inView = en.isIntersecting; syncGalleryMedia(); },
       { threshold: 0.3 }).observe($('#highlights'));
 
