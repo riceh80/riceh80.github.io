@@ -875,3 +875,20 @@ body.sheet-open { overflow: hidden; }
   .note-arrow { width: 50px; }
   .a-story { font-size: 18px; text-align: left; margin-top: 40px; }
 }
+
+/* About header, bigger: more room, larger name, notes, arrows and intro */
+.a-hero .wrap { max-width: 1320px; }
+.a-sketch { row-gap: 12px; column-gap: clamp(16px, 2.4vw, 40px); }
+.a-eyebrow { font-size: 19px; margin-bottom: 8px; }
+.a-name { font-size: clamp(64px, 10.5vw, 168px); }
+.note { max-width: 320px; }
+.note-text { font-size: clamp(25px, 2.6vw, 38px); }
+.note-arrow { width: clamp(66px, 7.5vw, 116px); }
+.note-arrow path { stroke-width: 3.6; }
+.a-story { max-width: 780px; font-size: clamp(21px, 2.2vw, 29px); line-height: 1.45; margin-top: clamp(52px, 8vh, 88px); }
+@media (max-width: 734px) {
+  .a-name { font-size: clamp(48px, 14.5vw, 66px); }
+  .note-text { font-size: 21px; }
+  .note-arrow { width: 58px; }
+  .a-story { font-size: 20px; }
+}
