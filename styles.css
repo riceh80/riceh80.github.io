@@ -1025,3 +1025,9 @@ a.fun-song[href]:hover .fun-title { text-decoration: underline; text-underline-o
 .fun-games li.fresh { animation: chipIn .5s cubic-bezier(.3, 1.4, .5, 1) both; }
 @keyframes chipIn { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .fun-games li.fresh { animation: none; } }
+
+/* ---------- crisp cards: flat (no 3D layer) unless you're hovering, and only one zoom ---------- */
+.tilt { transform: none; }
+.tilt.hovering { transform: perspective(1100px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) scale(var(--ts, 1)); }
+.lu-media:hover .media { transform: none; }
+.media-card, .mc-title, .mc-meta { -webkit-font-smoothing: antialiased; }
