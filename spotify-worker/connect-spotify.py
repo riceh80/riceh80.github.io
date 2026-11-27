@@ -99,7 +99,18 @@ def main():
         tokens = post_form('https://accounts.spotify.com/api/token',
                            {'grant_type': 'authorization_code', 'code': got['code'], 'redirect_uri': REDIRECT}, basic)
     except urllib.error.HTTPError as e:
-        sys.exit(f'Spotify turned down the Client ID / secret (HTTP {e.code}). Copy them again and rerun.')
+        try:
+            why = json.loads(e.read().decode() or '{}')
+        except ValueError:
+            why = {}
+        code, detail = why.get('error', ''), why.get('error_description', '')
+        if code == 'invalid_client':
+            sys.exit(f'Spotify says the Client ID or secret is wrong ({detail or code}).\n'
+                     'On your app\'s Settings page, click "View client secret", copy it again (no spaces), and rerun.')
+        if code == 'invalid_grant':
+            sys.exit(f'Spotify didn’t accept the sign-in ({detail or code}).\n'
+                     f'Check the app\'s Redirect URI is exactly {REDIRECT}, then rerun and press Agree once.')
+        sys.exit(f'Spotify said no (HTTP {e.code}: {detail or code or "no reason given"}). Rerun to try again.')
     refresh = tokens.get('refresh_token', '')
     if not refresh:
         sys.exit('Spotify didn’t send a refresh token. Run this again.')

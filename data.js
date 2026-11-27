@@ -38,7 +38,7 @@ window.SITE = {
       // 'https://spotify-now.<you>.workers.dev'. With it, the music card reads straight
       // from Spotify: what's playing now, or your last song, on any device.
       // Leave '' to use Discord's Spotify status instead.
-      spotifyApi: '',
+      spotifyApi: 'https://spotify-now.riceh80.workers.dev',
       // Games you play. The one you're playing right now gets a "now" tag.
       games: ['Valorant', 'League of Legends', 'Roblox', 'Honkai: Star Rail', 'Minecraft'],
       github: 'https://github.com/riceh80',
