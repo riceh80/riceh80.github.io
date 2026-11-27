@@ -1,0 +1,7 @@
+# Cloudflare Worker that tells the About page what you're playing on Spotify.
+# Deploy:  npx wrangler deploy     (from this folder)
+# Secrets: python3 connect-spotify.py
+name = "spotify-now"
+main = "worker.js"
+compatibility_date = "2026-06-01"
+workers_dev = true

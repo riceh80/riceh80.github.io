@@ -901,11 +901,11 @@
       `<div class="spec-row reveal" style="--d:${(i * 0.06).toFixed(2)}s"><dt>${esc(label)}</dt><dd>${lines.map((l) => `<p>${esc(l)}</p>`).join('')}</dd></div>`).join('');
   }
 
-  /* ---------------- OFF THE CLOCK: live Discord status ----------------
-     Reads your Discord presence through Lanyard (api.lanyard.rest): the game
-     Discord detects on your laptop or PC (with how long you've been playing),
-     and your Spotify song. When you're not playing, it shows the last game /
-     song saved by the "remember" job (Lanyard KV: last_game, last_song ...). */
+  /* ---------------- OFF THE CLOCK: games + music ----------------
+     Games: your Discord presence through Lanyard (api.lanyard.rest), meaning the game
+     Discord detects on your laptop or PC (with how long you've been playing). When
+     you're not playing, the last game saved by the "remember" job (Lanyard KV).
+     Music: your Spotify Worker (P.spotifyApi) if it's set up, else Discord's Spotify status. */
   const ago = (ms) => {
     const m = Math.max(1, Math.round(ms / 60000));
     if (m < 60) return `${m}m ago`;
@@ -921,18 +921,24 @@
     const s = Math.max(0, Math.floor(ms / 1000));
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   };
-  const fun = { data: null, tick: 0 };
+  const fun = { data: null, tick: 0, spotify: null, spotifyAt: 0, spotifyAsked: 0, askSpotify: () => {} };
 
   function renderFun() {
     const games = P.games || [];
     $('#funGames').hidden = !games.length;
     $('#funGamesList').innerHTML = games.map((g) => `<li data-game="${esc(g.toLowerCase())}"><span>${esc(g)}</span></li>`).join('');
     const live = !!P.discordId;
+    const music = live || !!P.spotifyApi;
     $('#funPlaying').hidden = !live;
-    $('#funListening').hidden = !live;
-    $('#funSection').hidden = !live && !games.length;
-    $('.fun-grid').classList.toggle('solo', !live);   // just the games card: let it span the row
+    $('#funListening').hidden = !music;
+    $('#funSection').hidden = !music && !games.length;
+    $('.fun-grid').classList.toggle('solo', !music);   // just the games card: let it span the row
     if (live) connectPresence(P.discordId);
+    if (P.spotifyApi) connectSpotify(P.spotifyApi);
+    if (music) {
+      clearInterval(fun.tick);
+      fun.tick = setInterval(() => { if (!document.hidden) paintPresence(); }, 1000);   // timers + progress bar
+    }
   }
 
   function gameArt(act) {
@@ -944,6 +950,7 @@
   }
 
   function paintPresence() {
+    paintMusic();
     const d = fun.data;
     if (!d) return;
     const now = Date.now();
@@ -979,52 +986,101 @@
       art.hidden = true;
     }
     $$('#funGamesList li').forEach((li) => li.classList.toggle('now', !!act && li.dataset.game === act.name.toLowerCase()));
+  }
 
-    // --- music
-    const sp = d.listening_to_spotify && d.spotify;
-    const songCard = $('#funListening');
-    const cover = $('#funCover');
+  // Fill the music card. `done` / `total` (ms) draw the progress bar; leave them out to hide it.
+  function setSong({ state, label, song, sub = '', cover = '', url = '', done = 0, total = 0 }) {
+    $('#funListening').dataset.state = state;
+    $('#funSongLabel').textContent = label;
+    $('#funSong').textContent = song;
+    $('#funArtist').textContent = sub;
+    const img = $('#funCover');
+    img.hidden = !cover;
+    if (cover && img.getAttribute('src') !== cover) img.src = cover;
     const link = $('#funSongLink');
-    if (sp) {
-      songCard.dataset.state = 'live';
-      $('#funSongLabel').textContent = 'Listening now';
-      $('#funSong').textContent = sp.song;
-      $('#funArtist').textContent = (sp.artist || '').replace(/;/g, ',');
-      cover.hidden = !sp.album_art_url;
-      if (sp.album_art_url && cover.getAttribute('src') !== sp.album_art_url) cover.src = sp.album_art_url;
-      if (sp.track_id) link.href = `https://open.spotify.com/track/${sp.track_id}`; else link.removeAttribute('href');
-      const t = sp.timestamps || {};
-      const total = t.end - t.start;
-      const done = Math.min(total, now - t.start);
-      const ok = total > 0;
-      $('#funProgress').hidden = !ok;
-      $('#funTimes').hidden = !ok;
-      if (ok) {
-        $('#funProgressBar').style.width = `${(done / total) * 100}%`;
-        $('#funElapsed').textContent = clock(done);
-        $('#funDuration').textContent = clock(total);
-      }
-    } else {
-      $('#funProgress').hidden = true;
-      $('#funTimes').hidden = true;
-      if (kv.last_song) {
-        songCard.dataset.state = 'last';
-        $('#funSongLabel').textContent = 'Last listened';
-        $('#funSong').textContent = kv.last_song;
-        const when = kv.last_song_at ? Date.parse(kv.last_song_at) : NaN;
-        $('#funArtist').textContent = [kv.last_artist, isNaN(when) ? '' : ago(now - when)].filter(Boolean).join(' · ');
-        cover.hidden = !kv.last_cover;
-        if (kv.last_cover) cover.src = kv.last_cover;
-        if (kv.last_track) link.href = `https://open.spotify.com/track/${kv.last_track}`; else link.removeAttribute('href');
-      } else {
-        songCard.dataset.state = 'idle';
-        $('#funSongLabel').textContent = 'Not listening right now';
-        $('#funSong').textContent = 'Nothing on';
-        $('#funArtist').textContent = '';
-        cover.hidden = true;
-        link.removeAttribute('href');
-      }
+    if (url) link.href = url; else link.removeAttribute('href');
+    const bar = total > 0;
+    $('#funProgress').hidden = !bar;
+    $('#funTimes').hidden = !bar;
+    if (bar) {
+      const d = Math.max(0, Math.min(total, done));
+      $('#funProgressBar').style.width = `${(d / total) * 100}%`;
+      $('#funElapsed').textContent = clock(d);
+      $('#funDuration').textContent = clock(total);
     }
+  }
+
+  // Music: straight from Spotify (through your Worker, P.spotifyApi) when it's set up and
+  // answering; otherwise from Discord's Spotify status through Lanyard.
+  function paintMusic() {
+    const now = Date.now();
+    const s = fun.spotify;
+    if (s) {
+      const n = s.now;
+      if (n && n.playing) {
+        const done = n.progress_ms + (s.age_ms || 0) + (now - fun.spotifyAt);
+        // the song should have ended: ask again so the next one shows up promptly
+        if (n.duration_ms && done > n.duration_ms + 1500 && now - fun.spotifyAsked > 3000) fun.askSpotify();
+        setSong({ state: 'live', label: 'Listening now', song: n.song, sub: n.artist, cover: n.cover, url: n.url, done, total: n.duration_ms });
+        return;
+      }
+      // paused in the last 15 minutes: show where it stopped
+      if (n && n.changed_at && now - n.changed_at < 15 * 60000) {
+        setSong({ state: 'paused', label: 'Paused', song: n.song, sub: n.artist, cover: n.cover, url: n.url, done: n.progress_ms, total: n.duration_ms });
+        return;
+      }
+      const l = s.last || (n && { ...n, played_at: n.changed_at ? new Date(n.changed_at).toISOString() : '' });
+      if (l) {
+        const when = Date.parse(l.played_at);
+        setSong({ state: 'last', label: 'Last listened', song: l.song, sub: [l.artist, isNaN(when) ? '' : ago(now - when)].filter(Boolean).join(' · '), cover: l.cover, url: l.url });
+        return;
+      }
+      setSong({ state: 'idle', label: 'Not listening right now', song: 'Nothing on' });
+      return;
+    }
+
+    const d = fun.data;
+    if (!d) return;
+    const kv = d.kv || {};
+    const sp = d.listening_to_spotify && d.spotify;
+    if (sp) {
+      const t = sp.timestamps || {};
+      setSong({
+        state: 'live', label: 'Listening now', song: sp.song, sub: (sp.artist || '').replace(/;/g, ','),
+        cover: sp.album_art_url, url: sp.track_id ? `https://open.spotify.com/track/${sp.track_id}` : '',
+        done: now - t.start, total: t.end - t.start,
+      });
+    } else if (kv.last_song) {
+      const when = kv.last_song_at ? Date.parse(kv.last_song_at) : NaN;
+      setSong({
+        state: 'last', label: 'Last listened', song: kv.last_song,
+        sub: [kv.last_artist, isNaN(when) ? '' : ago(now - when)].filter(Boolean).join(' · '),
+        cover: kv.last_cover, url: kv.last_track ? `https://open.spotify.com/track/${kv.last_track}` : '',
+      });
+    } else {
+      setSong({ state: 'idle', label: 'Not listening right now', song: 'Nothing on' });
+    }
+  }
+
+  // Ask the Worker every 10s while the page is open (and right away when you come back to the tab).
+  function connectSpotify(url) {
+    fun.spotifyAsked = 0;
+    fun.askSpotify = () => {
+      fun.spotifyAsked = Date.now();
+      return fetch(url, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => {
+          if (j && !j.error) { fun.spotify = j; fun.spotifyAt = Date.now(); }
+          else fun.spotify = null;       // not set up / Spotify down: Discord's status takes over
+          paintMusic();
+        })
+        .catch(() => {});
+    };
+    fun.askSpotify();
+    setInterval(() => { if (!document.hidden) fun.askSpotify(); }, 10000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && Date.now() - fun.spotifyAsked > 5000) fun.askSpotify();
+    });
   }
 
   // Live updates over Lanyard's socket; falls back to checking every 10s.
@@ -1050,8 +1106,6 @@
       ws.onerror = () => { clearInterval(beat); startPolling(); };
       ws.onclose = () => { clearInterval(beat); startPolling(); };
     } catch (e) { startPolling(); }
-    clearInterval(fun.tick);
-    fun.tick = setInterval(() => { if (!document.hidden) paintPresence(); }, 1000);   // timers + progress bar
   }
 
   // Count a number up from 0 when it scrolls into view (500, 16, ...)

@@ -34,6 +34,11 @@ window.SITE = {
       // playing (and for how long) and your Spotify song, live from Discord via
       // Lanyard (join discord.gg/lanyard once). Leave '' to hide the live cards.
       discordId: '409780143943450624',
+      // spotifyApi: the link of your Spotify Worker (spotify-worker/ in this repo), e.g.
+      // 'https://spotify-now.<you>.workers.dev'. With it, the music card reads straight
+      // from Spotify: what's playing now, or your last song, on any device.
+      // Leave '' to use Discord's Spotify status instead.
+      spotifyApi: '',
       // Games you play. The one you're playing right now gets a "now" tag.
       games: ['Valorant', 'League of Legends', 'Roblox', 'Honkai: Star Rail', 'Minecraft'],
       github: 'https://github.com/riceh80',
