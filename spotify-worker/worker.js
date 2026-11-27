@@ -12,6 +12,10 @@
 //    last_game_app) and keeps your 5 most recent games in order (recent_games),
 //    so the page can say "Last played" after you stop.
 //
+//    Also once a minute, the song you're playing is noted in Lanyard KV (last_song, last_artist,
+//    last_cover, last_song_url, last_song_at), so "Last listened" is right even for a song you
+//    stopped partway (Spotify's own history only lists finished songs).
+//
 // 3. Keeping Spotify connected. Spotify makes every app's access run out 6 months after you
 //    approve it. Open  https://<this worker>/connect  and press Agree to renew it (one click).
 //    With a DISCORD_WEBHOOK secret, it pings you in Discord 7 and 2 days before it runs out.
@@ -229,6 +233,36 @@ async function rememberGame(env) {
   }
 }
 
+/* ---------------- music: remember the song you stopped on ---------------- */
+// Spotify's own history only lists songs you finished (30s+), so a song you stopped halfway
+// never shows up there. Once a minute, note what's playing in your Lanyard KV (last_song...):
+// every run while it plays, and once more right after you pause.
+async function rememberSong(env) {
+  if (!env.LANYARD_KEY || !env.DISCORD_ID || !env.SPOTIFY_CLIENT_ID) return;
+  let res;
+  try { res = await spotify(env, '/me/player/currently-playing?additional_types=episode'); } catch (e) { return; }
+  if (res.status !== 200) return;              // nothing loaded
+  const j = await res.json();
+  const info = describe(j.item);
+  if (!info) return;
+  const changed = j.timestamp || 0;
+  const justPaused = !j.is_playing && changed && Date.now() - changed < 2 * 60_000;
+  if (!j.is_playing && !justPaused) return;     // paused a while ago: already saved
+  const values = {
+    last_song: info.song,
+    last_artist: info.artist,
+    last_cover: info.cover,
+    last_song_url: info.url,
+    last_song_at: new Date(j.is_playing ? Date.now() : changed).toISOString(),
+  };
+  const body = Object.fromEntries(Object.entries(values).filter(([, v]) => v));
+  await fetch(`https://api.lanyard.rest/v1/users/${env.DISCORD_ID}/kv`, {
+    method: 'PATCH',
+    headers: { Authorization: env.LANYARD_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+}
+
 /* ---------------- keeping Spotify connected ---------------- */
 
 const longDate = (ms) => new Date(ms).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'America/New_York' });
@@ -351,7 +385,7 @@ export default {
   async scheduled(event, env, ctx) {
     const renewUrl = env.RENEW_URL || 'https://spotify-now.riceh80.workers.dev/connect';
     const hourly = new Date(event.scheduledTime || Date.now()).getUTCMinutes() === 0;
-    ctx.waitUntil(Promise.all([rememberGame(env), checkSpotifyLink(env, renewUrl, hourly)]));
+    ctx.waitUntil(Promise.all([rememberGame(env), rememberSong(env), checkSpotifyLink(env, renewUrl, hourly)]));
   },
 
   async fetch(request, env) {

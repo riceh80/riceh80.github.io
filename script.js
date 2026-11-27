@@ -1085,6 +1085,17 @@
     }
   }
 
+  // The song the Worker saw you stop on, saved in your Lanyard KV.
+  function savedSong() {
+    const kv = (fun.data && fun.data.kv) || {};
+    if (!kv.last_song) return null;
+    const url = /^https:\/\/open\.spotify\.com\//.test(kv.last_song_url || '') ? kv.last_song_url
+      : kv.last_track ? `https://open.spotify.com/track/${encodeURIComponent(kv.last_track)}` : '';
+    const cover = /^https:\/\/i\.scdn\.co\//.test(kv.last_cover || '') ? kv.last_cover : '';
+    return { song: kv.last_song, artist: (kv.last_artist || '').replace(/;/g, ','), cover, url, at: Date.parse(kv.last_song_at) || 0 };
+  }
+  const newestSong = (list) => list.filter((x) => x && x.song).sort((a, b) => (b.at || 0) - (a.at || 0))[0] || null;
+
   // Music: straight from Spotify (through your Worker, P.spotifyApi) when it's set up and
   // answering; otherwise from Discord's Spotify status through Lanyard.
   function paintMusic() {
@@ -1104,10 +1115,15 @@
         setSong({ state: 'paused', label: 'Paused', song: n.song, sub: n.artist, cover: n.cover, url: n.url, done: n.progress_ms, total: n.duration_ms });
         return;
       }
-      const l = s.last || (n && { ...n, played_at: n.changed_at ? new Date(n.changed_at).toISOString() : '' });
+      // Last listened: the newest of Spotify's history (finished songs only), the song the
+      // Worker saw you stop on (Lanyard KV), and a song left paused.
+      const l = newestSong([
+        s.last && { ...s.last, at: Date.parse(s.last.played_at) },
+        n && { ...n, at: n.changed_at },
+        savedSong(),
+      ]);
       if (l) {
-        const when = Date.parse(l.played_at);
-        setSong({ state: 'last', label: 'Last listened', song: l.song, sub: [l.artist, isNaN(when) ? '' : ago(now - when)].filter(Boolean).join(' · '), cover: l.cover, url: l.url });
+        setSong({ state: 'last', label: 'Last listened', song: l.song, sub: [l.artist, l.at ? ago(now - l.at) : ''].filter(Boolean).join(' · '), cover: l.cover, url: l.url });
         return;
       }
       setSong({ state: 'idle', label: 'Not listening right now', song: 'Nothing on' });
@@ -1126,12 +1142,8 @@
         done: now - t.start, total: t.end - t.start,
       });
     } else if (kv.last_song) {
-      const when = kv.last_song_at ? Date.parse(kv.last_song_at) : NaN;
-      setSong({
-        state: 'last', label: 'Last listened', song: kv.last_song,
-        sub: [kv.last_artist, isNaN(when) ? '' : ago(now - when)].filter(Boolean).join(' · '),
-        cover: kv.last_cover, url: kv.last_track ? `https://open.spotify.com/track/${kv.last_track}` : '',
-      });
+      const l = savedSong();
+      setSong({ state: 'last', label: 'Last listened', song: l.song, sub: [l.artist, l.at ? ago(now - l.at) : ''].filter(Boolean).join(' · '), cover: l.cover, url: l.url });
     } else {
       setSong({ state: 'idle', label: 'Not listening right now', song: 'Nothing on' });
     }
