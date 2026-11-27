@@ -993,3 +993,30 @@ a.fun-song[href]:hover .fun-title { text-decoration: underline; text-underline-o
 
 /* music card: paused (grey dot, dimmed bar) */
 .fun-card[data-state="paused"] .fun-progress span { background: var(--night-2); }
+
+/* ---------- game card: icon, or a little laptop typing code when the game has none ---------- */
+.fun-laptop { display: grid; place-items: center; color: rgba(244, 236, 220, .85); }
+.fun-laptop[hidden] { display: none; }
+.fun-laptop svg { width: 100%; height: 100%; overflow: visible; }
+.fun-laptop .lt,
+.fun-laptop .code { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.fun-laptop .key { stroke: #ff5a5f; }
+.fun-laptop .code { stroke-dasharray: 1; stroke-dashoffset: 1; animation: 6s steps(4, end) infinite; }
+.fun-laptop .c1 { animation-name: type1; }
+.fun-laptop .c2 { animation-name: type2; }
+.fun-laptop .c3 { animation-name: type3; }
+.fun-laptop .c4 { animation-name: type4; }
+.fun-laptop .c5 { animation-name: type5; }
+.fun-laptop .c6 { animation-name: type6; }
+.fun-laptop .cursor { fill: #ff5a5f; animation: cursorBlink 1s steps(1) infinite; }
+@keyframes type1 { 0% { stroke-dashoffset: 1; } 10%, 92% { stroke-dashoffset: 0; } 93%, 100% { stroke-dashoffset: 1; } }
+@keyframes type2 { 0%, 12% { stroke-dashoffset: 1; } 24%, 92% { stroke-dashoffset: 0; } 93%, 100% { stroke-dashoffset: 1; } }
+@keyframes type3 { 0%, 26% { stroke-dashoffset: 1; } 38%, 92% { stroke-dashoffset: 0; } 93%, 100% { stroke-dashoffset: 1; } }
+@keyframes type4 { 0%, 40% { stroke-dashoffset: 1; } 48%, 92% { stroke-dashoffset: 0; } 93%, 100% { stroke-dashoffset: 1; } }
+@keyframes type5 { 0%, 50% { stroke-dashoffset: 1; } 62%, 92% { stroke-dashoffset: 0; } 93%, 100% { stroke-dashoffset: 1; } }
+@keyframes type6 { 0%, 64% { stroke-dashoffset: 1; } 72%, 92% { stroke-dashoffset: 0; } 93%, 100% { stroke-dashoffset: 1; } }
+@keyframes cursorBlink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .fun-laptop .code { animation: none; stroke-dashoffset: 0; }
+  .fun-laptop .cursor { animation: none; }
+}

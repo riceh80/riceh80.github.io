@@ -8,7 +8,8 @@
 //        age_ms }                    // how old this answer is (it's reused for up to a second)
 //
 // 2. Games (every minute, on its own): if Discord shows you in a game, it saves the game to
-//    your Lanyard KV every 10 seconds (last_game, last_game_at, last_game_minutes, last_game_art),
+//    your Lanyard KV every 10 seconds (last_game, last_game_at, last_game_minutes, last_game_art,
+//    last_game_app),
 //    so the page can say "Last played" after you stop.
 //
 // 3. Keeping Spotify connected. Spotify makes every app's access run out 6 months after you
@@ -168,13 +169,31 @@ function pickGame(activities) {
     .sort((a, b) => (b.application_id ? 1 : 0) - (a.application_id ? 1 : 0) || started(b) - started(a))[0] || null;
 }
 
+// A game's icon from Discord (public info), e.g. Minecraft's grass block. '' if it has none.
+const iconCache = new Map();
+async function appIcon(id) {
+  if (!id || !/^\d{5,25}$/.test(id)) return '';
+  if (iconCache.has(id)) return iconCache.get(id);
+  let url = '';
+  try {
+    const res = await fetch(`https://discord.com/api/v10/applications/${id}/rpc`);
+    if (res.ok) {
+      const j = await res.json();
+      if (j.icon && /^[a-f0-9_]+$/i.test(j.icon)) url = `https://cdn.discordapp.com/app-icons/${id}/${j.icon}.png?size=128`;
+    }
+  } catch (e) { /* no icon then */ }
+  iconCache.set(id, url);
+  return url;
+}
+
 async function saveGame(env, act) {
   const start = act.timestamps && act.timestamps.start;
   const values = {
     last_game: act.name,
     last_game_at: new Date().toISOString(),
     last_game_minutes: start ? String(Math.floor((Date.now() - start) / 60000)) : '',
-    last_game_art: discordArt(act),
+    last_game_art: discordArt(act) || await appIcon(act.application_id),
+    last_game_app: act.application_id || '',
   };
   // Lanyard KV only takes non-empty strings
   const body = Object.fromEntries(Object.entries(values).filter(([, v]) => v));

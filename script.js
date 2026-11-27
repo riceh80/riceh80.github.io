@@ -954,6 +954,38 @@
       .sort((a, b) => score(b) - score(a) || started(b) - started(a))[0] || null;
   }
 
+  // A game's icon from Discord's public app info (e.g. Minecraft's grass block).
+  // Returns the image link, '' when the game has none, or null while it's still being looked up.
+  const appIcons = {};
+  function appIcon(id) {
+    if (!id || !/^\d{5,25}$/.test(id)) return '';
+    if (id in appIcons) return appIcons[id];
+    appIcons[id] = null;
+    fetch(`https://discord.com/api/v10/applications/${id}/rpc`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        appIcons[id] = j && /^[a-f0-9_]+$/i.test(j.icon || '') ? `https://cdn.discordapp.com/app-icons/${id}/${j.icon}.png?size=128` : '';
+      })
+      .catch(() => { appIcons[id] = ''; })
+      .finally(paintPresence);
+    return null;
+  }
+
+  // The game card's picture: the icon if there is one, otherwise the little laptop typing code.
+  // src: a link, '' (no icon: laptop), or null (show nothing: not playing / still looking it up).
+  function showGameArt(src) {
+    const img = $('#funGameArt');
+    const laptop = $('#funGameDoodle');
+    if (!img.dataset.wired) {
+      img.dataset.wired = '1';
+      img.addEventListener('error', () => { fun.badArt = img.getAttribute('src'); paintPresence(); });
+    }
+    const usable = src && src !== fun.badArt;
+    img.hidden = !usable;
+    if (usable && img.getAttribute('src') !== src) img.src = src;
+    if (laptop) laptop.hidden = usable || src === null;
+  }
+
   function gameArt(act) {
     const img = act && act.assets && act.assets.large_image;
     if (!img) return '';
@@ -973,16 +1005,13 @@
     // --- game
     const act = pickGame(d.activities || []);
     const playCard = $('#funPlaying');
-    const art = $('#funGameArt');
     if (act) {
       playCard.dataset.state = 'live';
       $('#funPlayingLabel').textContent = 'Playing now';
       $('#funGame').textContent = act.name;
       const start = act.timestamps && act.timestamps.start;
       $('#funGameSub').textContent = start ? `for ${span(now - start)}` : 'right now';
-      const src = gameArt(act);
-      art.hidden = !src;
-      if (src && art.getAttribute('src') !== src) art.src = src;
+      showGameArt(gameArt(act) || appIcon(act.application_id));
     } else if (kv.last_game) {
       playCard.dataset.state = 'last';
       $('#funPlayingLabel').textContent = 'Last played';
@@ -991,14 +1020,13 @@
       const mins = Number(kv.last_game_minutes);
       $('#funGameSub').textContent = [mins ? `played ${span(mins * 60000)}` : '', isNaN(when) ? '' : ago(now - when)].filter(Boolean).join(' · ');
       const saved = /^https:\/\/(media\.discordapp\.net|cdn\.discordapp\.com)\//.test(kv.last_game_art || '') ? kv.last_game_art : '';
-      art.hidden = !saved;
-      if (saved && art.getAttribute('src') !== saved) art.src = saved;
+      showGameArt(saved || appIcon(kv.last_game_app));
     } else {
       playCard.dataset.state = 'idle';
       $('#funPlayingLabel').textContent = status === 'offline' ? 'Offline' : 'Not playing right now';
       $('#funGame').textContent = status === 'offline' ? 'Back soon' : 'Taking a break';
       $('#funGameSub').textContent = '';
-      art.hidden = true;
+      showGameArt(null);
     }
     $$('#funGamesList li').forEach((li) => li.classList.toggle('now', !!act && li.dataset.game === act.name.toLowerCase()));
   }
