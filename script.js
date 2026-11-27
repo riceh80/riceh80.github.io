@@ -904,7 +904,7 @@
   /* ---------------- OFF THE CLOCK: games + music ----------------
      Games: your Discord presence through Lanyard (api.lanyard.rest), meaning the game
      Discord detects on your laptop or PC (with how long you've been playing). When
-     you're not playing, the last game saved by the "remember" job (Lanyard KV).
+     you're not playing, the last game your Worker saved (Lanyard KV, spotify-worker/).
      Music: your Spotify Worker (P.spotifyApi) if it's set up, else Discord's Spotify status. */
   const ago = (ms) => {
     const m = Math.max(1, Math.round(ms / 60000));
@@ -977,7 +977,9 @@
       const when = kv.last_game_at ? Date.parse(kv.last_game_at) : NaN;
       const mins = Number(kv.last_game_minutes);
       $('#funGameSub').textContent = [mins ? `played ${span(mins * 60000)}` : '', isNaN(when) ? '' : ago(now - when)].filter(Boolean).join(' · ');
-      art.hidden = true;
+      const saved = /^https:\/\/(media\.discordapp\.net|cdn\.discordapp\.com)\//.test(kv.last_game_art || '') ? kv.last_game_art : '';
+      art.hidden = !saved;
+      if (saved && art.getAttribute('src') !== saved) art.src = saved;
     } else {
       playCard.dataset.state = 'idle';
       $('#funPlayingLabel').textContent = status === 'offline' ? 'Offline' : 'Not playing right now';

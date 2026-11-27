@@ -1,14 +1,19 @@
-// Spotify for the About page's music card.
+// The About page's "Off the clock" helper: a tiny Cloudflare Worker that holds your secrets,
+// so the website never sees them. It does two jobs:
 //
-// A tiny Cloudflare Worker that holds your Spotify app's secret, so the website never sees it.
-// The page asks it "what's playing?" and gets back only this:
+// 1. Music (when the page asks): what you're playing on Spotify. The page gets back only this:
 //
 //   { now:  { song, artist, cover, url, duration_ms, playing, progress_ms, changed_at } | null,
 //     last: { song, artist, cover, url, duration_ms, played_at } | null,
 //     age_ms }                       // how old this answer is (it's reused for a few seconds)
 //
+// 2. Games (every minute, on its own): if Discord shows you in a game, it saves the game to
+//    your Lanyard KV every 10 seconds (last_game, last_game_at, last_game_minutes, last_game_art),
+//    so the page can say "Last played" after you stop.
+//
 // Secrets (set by connect-spotify.py, never stored in this repo):
-//   SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_REFRESH_TOKEN
+//   SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET, SPOTIFY_REFRESH_TOKEN, LANYARD_KEY (optional)
+// Setting (wrangler.toml): DISCORD_ID
 
 const ALLOWED_ORIGINS = [
   'https://riceh80.github.io',
@@ -92,7 +97,61 @@ async function readSpotify(env) {
   return { now, last };
 }
 
+/* ---------------- games: remember the last one ---------------- */
+const CHECK_EVERY_MS = 10_000;
+const CHECKS_PER_RUN = 6;          // 6 checks 10s apart fill the minute until the next run
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// the same art the page shows while you're playing
+function discordArt(act) {
+  const img = act.assets && act.assets.large_image;
+  if (!img) return '';
+  if (img.startsWith('mp:')) return `https://media.discordapp.net/${img.slice(3)}`;
+  if (act.application_id) return `https://cdn.discordapp.com/app-assets/${act.application_id}/${img}.png`;
+  return '';
+}
+
+async function currentGame(env) {
+  const res = await fetch(`https://api.lanyard.rest/v1/users/${env.DISCORD_ID}`);
+  if (!res.ok) return null;
+  const j = await res.json();
+  return ((j.data && j.data.activities) || []).find((a) => a.type === 0) || null;
+}
+
+async function saveGame(env, act) {
+  const start = act.timestamps && act.timestamps.start;
+  const values = {
+    last_game: act.name,
+    last_game_at: new Date().toISOString(),
+    last_game_minutes: start ? String(Math.floor((Date.now() - start) / 60000)) : '',
+    last_game_art: discordArt(act),
+  };
+  // Lanyard KV only takes non-empty strings
+  const body = Object.fromEntries(Object.entries(values).filter(([, v]) => v));
+  const res = await fetch(`https://api.lanyard.rest/v1/users/${env.DISCORD_ID}/kv`, {
+    method: 'PATCH',
+    headers: { Authorization: env.LANYARD_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Lanyard didn't save the game (${res.status}). Check the LANYARD_KEY secret.`);
+}
+
+async function rememberGame(env) {
+  if (!env.LANYARD_KEY || !env.DISCORD_ID) return;
+  for (let i = 0; i < CHECKS_PER_RUN; i++) {
+    if (i) await wait(CHECK_EVERY_MS);
+    const act = await currentGame(env);
+    if (!act) return;              // not playing: the last saved game stays as it is
+    await saveGame(env, act);
+  }
+}
+
 export default {
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(rememberGame(env));
+  },
+
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
     const cors = {

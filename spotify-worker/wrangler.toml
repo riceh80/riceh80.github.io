@@ -1,7 +1,14 @@
-# Cloudflare Worker that tells the About page what you're playing on Spotify.
+# Cloudflare Worker for the About page: your Spotify music + remembering your last game.
 # Deploy:  npx wrangler deploy     (from this folder)
 # Secrets: python3 connect-spotify.py
 name = "spotify-now"
 main = "worker.js"
 compatibility_date = "2026-06-01"
 workers_dev = true
+
+[vars]
+DISCORD_ID = "409780143943450624"
+
+# check for a game once a minute (then every 10s while you're playing)
+[triggers]
+crons = ["* * * * *"]

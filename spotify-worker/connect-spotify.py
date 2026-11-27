@@ -11,7 +11,11 @@ Then run:  python3 connect-spotify.py
 
 It asks for the app's Client ID and Client secret (the secret is hidden while you type),
 opens Spotify so you can press Agree, and saves the three values as secrets on your
-Cloudflare Worker. Nothing is printed or written to a file.
+Cloudflare Worker. Then it asks for your Lanyard key (the one the Lanyard bot sent you
+for .apikey) so the Worker can remember your last game; press Enter to skip that.
+Nothing is printed or written to a file.
+
+Only want to add or change the Lanyard key?   npx wrangler secret put LANYARD_KEY
 """
 import base64
 import getpass
@@ -113,14 +117,24 @@ def main():
     for name, value in (('SPOTIFY_CLIENT_ID', client_id),
                         ('SPOTIFY_CLIENT_SECRET', client_secret),
                         ('SPOTIFY_REFRESH_TOKEN', refresh)):
-        run = subprocess.run(['npx', '--yes', 'wrangler', 'secret', 'put', name],
-                             input=value, text=True, capture_output=True, cwd=HERE)
-        if run.returncode != 0:
-            tail = '\n'.join((run.stdout + run.stderr).strip().splitlines()[-6:])
-            sys.exit(f'Couldn’t save {name}:\n{tail}\n'
-                     'Did "npx wrangler login" and "npx wrangler deploy" both finish in this folder?')
-        print(f'  saved {name}')
-    print('\nAll set. Your Worker can read your Spotify now.')
+        put_secret(name, value)
+    print('Your Worker can read your Spotify now.\n')
+
+    lanyard = getpass.getpass('Lanyard key, to remember your last game (hidden; Enter to skip): ').strip()
+    if lanyard:
+        put_secret('LANYARD_KEY', lanyard)
+        print('Your Worker will remember your last game now.')
+    print('\nAll set.')
+
+
+def put_secret(name, value):
+    run = subprocess.run(['npx', '--yes', 'wrangler', 'secret', 'put', name],
+                         input=value, text=True, capture_output=True, cwd=HERE)
+    if run.returncode != 0:
+        tail = '\n'.join((run.stdout + run.stderr).strip().splitlines()[-6:])
+        sys.exit(f'Couldn’t save {name}:\n{tail}\n'
+                 'Did "npx wrangler login" and "npx wrangler deploy" both finish in this folder?')
+    print(f'  saved {name}')
 
 
 if __name__ == '__main__':
