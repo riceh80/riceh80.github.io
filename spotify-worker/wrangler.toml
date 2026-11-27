@@ -1,6 +1,8 @@
-# Cloudflare Worker for the About page: your Spotify music + remembering your last game.
+# Cloudflare Worker for the About page: your Spotify music, remembering your last game,
+# and keeping Spotify connected (renew link + Discord reminders).
 # Deploy:  npx wrangler deploy     (from this folder)
-# Secrets: python3 connect-spotify.py
+# Secrets: python3 connect-spotify.py   (first time)
+# Renew Spotify every 6 months: open RENEW_URL below and press Agree.
 name = "spotify-now"
 main = "worker.js"
 compatibility_date = "2026-06-01"
@@ -8,7 +10,14 @@ workers_dev = true
 
 [vars]
 DISCORD_ID = "409780143943450624"
+RENEW_URL = "https://spotify-now.riceh80.workers.dev/connect"
 
-# check for a game once a minute (then every 10s while you're playing)
+# small store for the renewed Spotify access and which reminders were sent
+[[kv_namespaces]]
+binding = "STATE"
+id = "26e38ec5e49e42c69a5e4ac30848b23c"
+
+# check for a game once a minute (then every 10s while you're playing),
+# and on the hour, how long Spotify stays connected
 [triggers]
 crons = ["* * * * *"]

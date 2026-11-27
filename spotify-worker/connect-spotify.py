@@ -16,6 +16,9 @@ for .apikey) so the Worker can remember your last game; press Enter to skip that
 Nothing is printed or written to a file.
 
 Only want to add or change the Lanyard key?   npx wrangler secret put LANYARD_KEY
+
+You only need this script once. Spotify makes you renew every 6 months; for that,
+just open https://spotify-now.riceh80.workers.dev/connect and press Agree.
 """
 import base64
 import getpass
@@ -129,7 +132,12 @@ def main():
                         ('SPOTIFY_CLIENT_SECRET', client_secret),
                         ('SPOTIFY_REFRESH_TOKEN', refresh)):
         put_secret(name, value)
-    print('Your Worker can read your Spotify now.\n')
+    # forget access saved earlier by the /connect renew link, so this new one is used
+    for key in ('refresh_token', 'authorized_at', 'reminded'):
+        subprocess.run(['npx', '--yes', 'wrangler', 'kv', 'key', 'delete', key, '--binding', 'STATE', '--remote'],
+                       text=True, capture_output=True, cwd=HERE)
+    print('Your Worker can read your Spotify now.')
+    print('Every 6 months Spotify makes you renew: open https://spotify-now.riceh80.workers.dev/connect\n')
 
     lanyard = getpass.getpass('Lanyard key, to remember your last game (hidden; Enter to skip): ').strip()
     if lanyard:

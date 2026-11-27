@@ -1064,25 +1064,41 @@
     }
   }
 
-  // Ask the Worker every 10s while the page is open (and right away when you come back to the tab).
+  // Ask the Worker every 2s while the music card is on screen (so a new song or a pause shows
+  // up within a couple of seconds), every 30s while it's scrolled away, and not at all while
+  // the tab is hidden. Coming back to the card or the tab asks right away.
   function connectSpotify(url) {
+    const FAST = 2000;
+    const SLOW = 30000;
+    let onScreen = false;
+    let busy = false;
+    let timer = 0;
     fun.spotifyAsked = 0;
+    const next = () => {
+      clearTimeout(timer);
+      if (!document.hidden) timer = setTimeout(fun.askSpotify, onScreen ? FAST : SLOW);
+    };
     fun.askSpotify = () => {
+      if (busy) return;
+      busy = true;
       fun.spotifyAsked = Date.now();
-      return fetch(url, { cache: 'no-store' })
+      fetch(url, { cache: 'no-store' })
         .then((r) => (r.ok ? r.json() : null))
         .then((j) => {
           if (j && !j.error) { fun.spotify = j; fun.spotifyAt = Date.now(); }
           else fun.spotify = null;       // not set up / Spotify down: Discord's status takes over
           paintMusic();
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => { busy = false; next(); });
     };
+    const askSoon = () => { if (!document.hidden && Date.now() - fun.spotifyAsked > FAST) fun.askSpotify(); else next(); };
+    new IntersectionObserver(([en]) => {
+      onScreen = en.isIntersecting;
+      if (onScreen) askSoon(); else next();
+    }).observe($('#funListening'));
+    document.addEventListener('visibilitychange', askSoon);
     fun.askSpotify();
-    setInterval(() => { if (!document.hidden) fun.askSpotify(); }, 10000);
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && Date.now() - fun.spotifyAsked > 5000) fun.askSpotify();
-    });
   }
 
   // Live updates over Lanyard's socket; falls back to checking every 10s.
