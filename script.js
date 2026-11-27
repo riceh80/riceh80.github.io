@@ -926,7 +926,7 @@
   function renderFun() {
     const games = P.games || [];
     $('#funGames').hidden = !games.length;
-    $('#funGamesList').innerHTML = games.map((g) => `<li data-game="${esc(g.toLowerCase())}"><span>${esc(g)}</span></li>`).join('');
+    paintGamesList(null, {});
     const live = !!P.discordId;
     const music = live || !!P.spotifyApi;
     $('#funPlaying').hidden = !live;
@@ -1028,7 +1028,39 @@
       $('#funGameSub').textContent = '';
       showGameArt(null);
     }
-    $$('#funGamesList li').forEach((li) => li.classList.toggle('now', !!act && li.dataset.game === act.name.toLowerCase()));
+    paintGamesList(act, kv);
+  }
+
+  // "Games I play": your 5 most recent, newest first. The game you're playing right now jumps
+  // to the top straight away; the Worker saves the order (Lanyard KV recent_games). Until 5
+  // have been played, the list in data.js fills the rest.
+  const GAMES_SHOWN = 5;
+  function recentGames(act, kv) {
+    let saved = [];
+    try { saved = JSON.parse(kv.recent_games || '[]'); } catch (e) { saved = []; }
+    const seen = new Set();
+    return [act && act.name, ...(Array.isArray(saved) ? saved : []), ...(P.games || [])]
+      .filter((g) => {
+        if (typeof g !== 'string' || !g.trim()) return false;
+        const k = g.toLowerCase();
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      })
+      .slice(0, GAMES_SHOWN);
+  }
+
+  function paintGamesList(act, kv) {
+    const host = $('#funGamesList');
+    const list = recentGames(act, kv);
+    const key = list.join('\n');
+    if (key !== fun.gamesKey) {
+      const changed = fun.gamesKey !== undefined && list[0] !== fun.gamesKey.split('\n')[0];
+      fun.gamesKey = key;
+      host.innerHTML = list.map((g, i) =>
+        `<li data-game="${esc(g.toLowerCase())}"${changed && i === 0 ? ' class="fresh"' : ''}><span>${esc(g)}</span></li>`).join('');
+    }
+    $$('li', host).forEach((li) => li.classList.toggle('now', !!act && li.dataset.game === act.name.toLowerCase()));
   }
 
   // Fill the music card. `done` / `total` (ms) draw the progress bar; leave them out to hide it.

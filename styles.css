@@ -1020,3 +1020,8 @@ a.fun-song[href]:hover .fun-title { text-decoration: underline; text-underline-o
   .fun-laptop .code { animation: none; stroke-dashoffset: 0; }
   .fun-laptop .cursor { animation: none; }
 }
+
+/* "Games I play": a newly played game pops in at the top of the list */
+.fun-games li.fresh { animation: chipIn .5s cubic-bezier(.3, 1.4, .5, 1) both; }
+@keyframes chipIn { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .fun-games li.fresh { animation: none; } }

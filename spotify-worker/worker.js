@@ -9,7 +9,7 @@
 //
 // 2. Games (every minute, on its own): if Discord shows you in a game, it saves the game to
 //    your Lanyard KV every 10 seconds (last_game, last_game_at, last_game_minutes, last_game_art,
-//    last_game_app),
+//    last_game_app) and keeps your 5 most recent games in order (recent_games),
 //    so the page can say "Last played" after you stop.
 //
 // 3. Keeping Spotify connected. Spotify makes every app's access run out 6 months after you
@@ -151,11 +151,24 @@ function discordArt(act) {
   return '';
 }
 
+// What you're playing now, plus what's already saved (for the recent-games list)
 async function currentGame(env) {
   const res = await fetch(`https://api.lanyard.rest/v1/users/${env.DISCORD_ID}`);
-  if (!res.ok) return null;
+  if (!res.ok) return { act: null, kv: {} };
   const j = await res.json();
-  return pickGame((j.data && j.data.activities) || []);
+  const d = j.data || {};
+  return { act: pickGame(d.activities || []), kv: d.kv || {} };
+}
+
+// Your 5 most recent games, newest first: a new game goes on top and the oldest drops off;
+// replaying one moves it back to the top.
+const RECENT_MAX = 5;
+function recentWith(saved, name) {
+  let list = [];
+  try { list = JSON.parse(saved || '[]'); } catch (e) { list = []; }
+  if (!Array.isArray(list)) list = [];
+  const key = name.toLowerCase();
+  return [name, ...list.filter((g) => typeof g === 'string' && g.toLowerCase() !== key)].slice(0, RECENT_MAX);
 }
 
 // With Discord open on more than one computer, several "games" can show at once, and Linux
@@ -186,7 +199,7 @@ async function appIcon(id) {
   return url;
 }
 
-async function saveGame(env, act) {
+async function saveGame(env, act, kv = {}) {
   const start = act.timestamps && act.timestamps.start;
   const values = {
     last_game: act.name,
@@ -194,6 +207,7 @@ async function saveGame(env, act) {
     last_game_minutes: start ? String(Math.floor((Date.now() - start) / 60000)) : '',
     last_game_art: discordArt(act) || await appIcon(act.application_id),
     last_game_app: act.application_id || '',
+    recent_games: JSON.stringify(recentWith(kv.recent_games, act.name)),
   };
   // Lanyard KV only takes non-empty strings
   const body = Object.fromEntries(Object.entries(values).filter(([, v]) => v));
@@ -209,9 +223,9 @@ async function rememberGame(env) {
   if (!env.LANYARD_KEY || !env.DISCORD_ID) return;
   for (let i = 0; i < CHECKS_PER_RUN; i++) {
     if (i) await wait(CHECK_EVERY_MS);
-    const act = await currentGame(env);
+    const { act, kv } = await currentGame(env);
     if (!act) return;              // not playing: the last saved game stays as it is
-    await saveGame(env, act);
+    await saveGame(env, act, kv);
   }
 }
 
