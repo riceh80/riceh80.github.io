@@ -941,6 +941,19 @@
     }
   }
 
+  // With Discord open on more than one computer, several "games" can show at once, and Linux
+  // Discord sometimes reports helper programs as games. Skip those, then prefer games from your
+  // "Games I play" list, then games Discord itself recognizes, then the most recently started.
+  const NOT_GAMES = /^(flatpak-spawn|bwrap|wineserver|wine|wine64|java|javaw|steam|steamwebhelper|pressure-vessel.*)$/i;
+  function pickGame(activities) {
+    const mine = (P.games || []).map((g) => g.toLowerCase());
+    const score = (a) => (mine.includes(a.name.toLowerCase()) ? 2 : 0) + (a.application_id ? 1 : 0);
+    const started = (a) => (a.timestamps && a.timestamps.start) || 0;
+    return activities
+      .filter((a) => a.type === 0 && a.name && !NOT_GAMES.test(a.name))
+      .sort((a, b) => score(b) - score(a) || started(b) - started(a))[0] || null;
+  }
+
   function gameArt(act) {
     const img = act && act.assets && act.assets.large_image;
     if (!img) return '';
@@ -958,7 +971,7 @@
     const status = d.discord_status || 'offline';
 
     // --- game
-    const act = (d.activities || []).find((a) => a.type === 0);
+    const act = pickGame(d.activities || []);
     const playCard = $('#funPlaying');
     const art = $('#funGameArt');
     if (act) {

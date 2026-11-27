@@ -154,7 +154,18 @@ async function currentGame(env) {
   const res = await fetch(`https://api.lanyard.rest/v1/users/${env.DISCORD_ID}`);
   if (!res.ok) return null;
   const j = await res.json();
-  return ((j.data && j.data.activities) || []).find((a) => a.type === 0) || null;
+  return pickGame((j.data && j.data.activities) || []);
+}
+
+// With Discord open on more than one computer, several "games" can show at once, and Linux
+// Discord sometimes reports helper programs as games. Skip those, prefer games Discord itself
+// recognizes, then the one started most recently.
+const NOT_GAMES = /^(flatpak-spawn|bwrap|wineserver|wine|wine64|java|javaw|steam|steamwebhelper|pressure-vessel.*)$/i;
+function pickGame(activities) {
+  const started = (a) => (a.timestamps && a.timestamps.start) || 0;
+  return activities
+    .filter((a) => a.type === 0 && a.name && !NOT_GAMES.test(a.name))
+    .sort((a, b) => (b.application_id ? 1 : 0) - (a.application_id ? 1 : 0) || started(b) - started(a))[0] || null;
 }
 
 async function saveGame(env, act) {
